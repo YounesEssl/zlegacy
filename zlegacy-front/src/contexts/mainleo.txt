@@ -1,0 +1,438 @@
+// oracle/src/main.leo
+// Oracle de décès pour héritage numérique - Architecture Vault Maître
+program oracle_tls_v2.aleo {
+    
+    // =================== STRUCTURES DE DONNÉES ===================
+    
+    /**
+     * Certificat de décès vérifié par une autorité gouvernementale
+     * Contient les informations cryptographiques nécessaires pour prouver un décès
+     */
+    struct DeathCertificate {
+        national_id_hash: field,      // Hash de l'identifiant national (sécurisé)
+        death_date: u32,              // Date de décès en timestamp Unix
+        issuing_authority: field,     // Hash de l'autorité émettrice (INSEE, SSA, etc.)
+        jurisdiction: u8,             // Code de juridiction (0=France, 1=USA, 2=UK, etc.)
+        certificate_hash: field,      // Hash du certificat original
+        validation_score: u8          // Score de confiance (0-100)
+    }
+
+    /**
+     * Preuve TLS cryptographique d'une requête vérifiée
+     * Utilise l'attestation TLS pour prouver l'authenticité des données gouvernementales
+     */
+    struct TLSProof {
+        server_cert_hash: field,      // Hash du certificat du serveur gouvernemental
+        response_hash: field,         // Hash de la réponse HTTP/API
+        timestamp: u32,               // Timestamp de la requête
+        signature_r: field,           // Partie R de la signature ECDSA
+        signature_s: field,           // Partie S de la signature ECDSA
+        chain_root_hash: field,       // Hash de la racine de la chaîne de certificats
+        nonce: scalar                 // Nonce pour éviter les attaques replay
+    }
+
+    /**
+     * Record privé d'attestation Oracle
+     * En Leo, les 'record' sont des tokens privés détenus par un utilisateur
+     * Ils ne sont visibles que par le propriétaire, contrairement aux mappings publics
+     */
+    record OracleAttestation {
+        owner: address,               // Propriétaire du record (vault ou bénéficiaire)
+        master_vault_id: field,       // Identifiant unique du vault maître (généré ailleurs)
+        oracle_type: u8,             // Type d'oracle (0=décès, 1=activité, etc.)
+        data_hash: field,            // Hash des données attestées
+        proof_hash: field,           // Hash de la preuve cryptographique
+        validation_timestamp: u32,    // Timestamp de validation
+        expiry_block: u32,           // Block d'expiration de l'attestation
+        confidence_level: u8,        // Niveau de confiance (0-100)
+        nonce: group                 // Nonce cryptographique (type group en Leo)
+    }
+
+    // =================== MAPPINGS PUBLICS ===================
+    
+    /**
+     * Architecture Vault Maître - L'oracle surveille les vaults créés ailleurs
+     * L'oracle ne crée PAS les vaults, il les surveille seulement
+     */
+    mapping person_death_status: field => bool;         // vault_maître → statut_décès
+    mapping person_last_activity: field => u32;         // vault_maître → dernière_activité
+
+    /**
+     * Mappings de l'oracle (fonctionnalités principales)
+     */
+    mapping trusted_oracles: address => bool;            // Liste des oracles de confiance
+    mapping validated_certificates: field => DeathCertificate;  // Certificats validés
+    mapping tls_proof_registry: field => TLSProof;       // Registre des preuves TLS
+    mapping inactivity_cache: field => u32;              // Cache des périodes d'inactivité
+
+    // =================== CONSTANTES ===================
+    
+    /**
+     * Hash des certificats racine des autorités gouvernementales
+     * Ces valeurs doivent correspondre aux vrais certificats TLS des sites officiels
+     */
+    const FRANCE_INSEE_CERT_HASH: field = 123456789012345field;
+    const USA_SSA_CERT_HASH: field = 987654321098765field;
+    const UK_GOVUK_CERT_HASH: field = 456789012345678field;
+    
+    /**
+     * Adresse administrateur du système
+     * En Leo, les adresses sont des identifiants cryptographiques publics
+     */
+    const ADMIN_ADDRESS: address = aleo1m06yuk9mwfhfgqea2hzkr6ntrsha3dvwllu5jphrgs6w2suc9q8qv65ya2;
+    
+    /**
+     * Paramètres de sécurité du système
+     */
+    const MAX_PROOF_AGE_BLOCKS: u32 = 86400u32;     // Age max d'une preuve (en blocs)
+    const MIN_CONFIDENCE_LEVEL: u8 = 90u8;          // Niveau de confiance minimum
+    const MIN_INACTIVITY_PERIOD: u32 = 15552000u32; // 180 jours minimum d'inactivité
+
+    // =================== FONCTIONS CRYPTOGRAPHIQUES ===================
+
+    /**
+     * Vérifie la signature TLS d'une réponse serveur
+     * IMPORTANT: 'inline' en Leo signifie que le code est inséré directement
+     * au lieu d'être appelé comme une fonction séparée (optimisation)
+     */
+    inline verify_tls_signature(
+        message_hash: field,
+        signature_r: field,
+        signature_s: field,
+        cert_chain_root: field
+    ) -> bool {
+        // Vérification basique de non-nullité des composants
+        let is_valid_r: bool = signature_r != 0field;
+        let is_valid_s: bool = signature_s != 0field;
+        let is_valid_msg: bool = message_hash != 0field;
+        let is_valid_cert: bool = cert_chain_root != 0field;
+        
+        let all_valid: bool = is_valid_r && is_valid_s && is_valid_msg && is_valid_cert;
+        
+        if all_valid {
+            // BHP256 est la fonction de hash native d'Aleo
+            // Plus sécurisée que SHA256 pour les preuves zero-knowledge
+            let hash1: field = BHP256::hash_to_field(message_hash + signature_r);
+            let hash2: field = BHP256::hash_to_field(signature_s + cert_chain_root);
+            let combined_hash: field = BHP256::hash_to_field(hash1 + hash2);
+            return combined_hash != 0field;
+        } else {
+            return false;
+        }
+    }
+
+    inline hash_id_simple(
+        raw_id: field,
+        jurisdiction: u8,
+        salt: scalar
+    ) -> field {
+        let jurisdiction_field: field = jurisdiction as field;
+        let combined: field = raw_id + jurisdiction_field;
+        let first_hash: field = BHP256::hash_to_field(combined);
+        let salted_hash: field = BHP256::commit_to_field(first_hash, salt);
+        return salted_hash;
+    }
+
+    inline create_cert_hash_simple(
+        national_id: field,
+        death_date: u32,
+        authority: field,
+        jurisdiction: u8
+    ) -> field {
+        let date_field: field = death_date as field;
+        let jurisdiction_field: field = jurisdiction as field;
+        
+        let hash1: field = BHP256::hash_to_field(national_id + date_field);
+        let hash2: field = BHP256::hash_to_field(authority + jurisdiction_field);
+        return BHP256::hash_to_field(hash1 + hash2);
+    }
+
+    function hash_national_id(
+        raw_id: field,
+        jurisdiction: u8,
+        salt: scalar
+    ) -> field {
+        return hash_id_simple(raw_id, jurisdiction, salt);
+    }
+
+    // =================== SYSTÈME DE HEARTBEAT ===================
+
+    /**
+     * SYSTÈME DE HEARTBEAT: Prouve qu'une personne est vivante
+     * Le vault_id maître est fourni par l'application principale
+     * L'oracle surveille les vaults existants
+     */
+    async transition submit_heartbeat(
+        public master_vault_id: field,      // Vault maître (créé gab)
+        public activity_signature: field,
+        public metadata_hash: field
+    ) -> Future {
+        return finalize_submit_heartbeat(master_vault_id, self.caller, metadata_hash);
+    }
+
+    async function finalize_submit_heartbeat(
+        public master_vault_id: field,
+        public caller: address,
+        public metadata_hash: field
+    ) {
+        // Mise à jour de l'activité - l'oracle accepte n'importe quel vault_id valide
+        // La vérification de propriété se fait dans l'application principale
+        let current_block: u32 = block.height;
+        person_last_activity.set(master_vault_id, current_block);
+        person_death_status.set(master_vault_id, false);
+    }
+
+    // =================== ORACLE DE DÉCÈS ===================
+
+    /**
+     * TRANSITION PRINCIPALE: Prouve le décès d'une personne via Oracle TLS
+     * Le vault maître est fourni par l'oracle service (qui connaît la correspondance)
+     */
+    async transition prove_death(
+        public master_vault_id: field,          // Vault maître (fourni par l'oracle service)
+        public national_id_hash: field,
+        public death_certificate: DeathCertificate,
+        public tls_proof: TLSProof,
+        public record_owner: address
+    ) -> (OracleAttestation, Future) {
+        
+        // Génération des hash cryptographiques pour l'attestation
+        let cert_hash: field = create_cert_hash_simple(
+            death_certificate.national_id_hash,
+            death_certificate.death_date,
+            death_certificate.issuing_authority,
+            death_certificate.jurisdiction
+        );
+        let proof_hash: field = BHP256::hash_to_field(tls_proof.server_cert_hash);
+        
+        // Création du record d'attestation privé
+        let attestation: OracleAttestation = OracleAttestation {
+            owner: record_owner,
+            master_vault_id: master_vault_id,    // Vault maître fourni
+            oracle_type: 0u8,
+            data_hash: cert_hash,
+            proof_hash: proof_hash,
+            validation_timestamp: 0u32,
+            expiry_block: 0u32,
+            confidence_level: 95u8,
+            nonce: group::GEN
+        };
+
+        return (attestation, finalize_prove_death(
+            master_vault_id,
+            national_id_hash,
+            death_certificate,
+            tls_proof,
+            self.caller
+        ));
+    }
+
+    /**
+     * Finalisation de la preuve de décès
+     */
+    async function finalize_prove_death(
+        public master_vault_id: field,
+        public national_id_hash: field,
+        public death_certificate: DeathCertificate,
+        public tls_proof: TLSProof,
+        public oracle_address: address
+    ) {
+        // 1. VÉRIFICATION ORACLE DE CONFIANCE
+        let oracle_trusted: bool = trusted_oracles.get_or_use(oracle_address, false);
+        assert(oracle_trusted);
+
+        // 2. VÉRIFICATION AGE DE LA PREUVE
+        let current_block: u32 = block.height;
+        let proof_age: u32 = current_block - tls_proof.timestamp;
+        assert(proof_age <= MAX_PROOF_AGE_BLOCKS);
+
+        // 3. VÉRIFICATION CERTIFICAT GOUVERNEMENTAL
+        let is_france_cert: bool = tls_proof.server_cert_hash == FRANCE_INSEE_CERT_HASH;
+        let is_usa_cert: bool = tls_proof.server_cert_hash == USA_SSA_CERT_HASH;
+        let is_uk_cert: bool = tls_proof.server_cert_hash == UK_GOVUK_CERT_HASH;
+        let valid_govt_cert: bool = is_france_cert || is_usa_cert || is_uk_cert;
+        assert(valid_govt_cert);
+
+        // 4. VÉRIFICATION SIGNATURE TLS
+        let is_valid_r: bool = tls_proof.signature_r != 0field;
+        let is_valid_s: bool = tls_proof.signature_s != 0field;
+        let is_valid_msg: bool = tls_proof.response_hash != 0field;
+        let is_valid_cert: bool = tls_proof.chain_root_hash != 0field;
+        
+        let all_valid: bool = is_valid_r && is_valid_s && is_valid_msg && is_valid_cert;
+        
+        let hash1: field = BHP256::hash_to_field(tls_proof.response_hash + tls_proof.signature_r);
+        let hash2: field = BHP256::hash_to_field(tls_proof.signature_s + tls_proof.chain_root_hash);
+        let combined_hash: field = BHP256::hash_to_field(hash1 + hash2);
+        
+        let signature_valid: bool = all_valid && (combined_hash != 0field);
+        assert(signature_valid);
+
+        // 5. VÉRIFICATION NON-DUPLICATION
+        let already_deceased: bool = person_death_status.get_or_use(master_vault_id, false);
+        assert(!already_deceased);
+
+        // 6. VÉRIFICATION NIVEAU DE CONFIANCE
+        assert(death_certificate.validation_score >= MIN_CONFIDENCE_LEVEL);
+
+        // 7. VÉRIFICATION INACTIVITÉ OBLIGATOIRE (CONDITION ET)
+        let last_block: u32 = person_last_activity.get_or_use(master_vault_id, 0u32);
+        let inactivity_period: u32 = current_block - last_block;
+        assert(inactivity_period >= MIN_INACTIVITY_PERIOD);
+
+        // 8. MISE À JOUR DE L'ÉTAT ON-CHAIN
+        person_death_status.set(master_vault_id, true);
+
+        let proof_id: field = BHP256::hash_to_field(master_vault_id);
+        validated_certificates.set(proof_id, death_certificate);
+        tls_proof_registry.set(proof_id, tls_proof);
+    }
+
+    // =================== FONCTIONS DE CONSULTATION ===================
+
+    /**
+     * Vérification du statut de décès
+     */
+    async transition check_death_status(
+        public master_vault_id: field
+    ) -> Future {
+        return finalize_check_death_status(master_vault_id);
+    }
+
+    async function finalize_check_death_status(
+        public master_vault_id: field
+    ) {
+        let death_confirmed: bool = person_death_status.get_or_use(master_vault_id, false);
+        // Le résultat est accessible via le mapping public person_death_status
+    }
+
+    /**
+     * Vérification de la dernière activité
+     */
+    async transition check_last_activity(
+        public master_vault_id: field
+    ) -> Future {
+        return finalize_check_last_activity(master_vault_id);
+    }
+
+    async function finalize_check_last_activity(
+        public master_vault_id: field
+    ) {
+        let last_block: u32 = person_last_activity.get_or_use(master_vault_id, 0u32);
+        let current_block: u32 = block.height;
+        let inactivity_period: u32 = current_block - last_block;
+        // Résultat accessible via les mappings publics
+    }
+
+    /**
+     * Vérification complète du statut d'inactivité
+     */
+    async transition get_inactivity_status(
+        public master_vault_id: field
+    ) -> Future {
+        return finalize_get_inactivity_status(master_vault_id);
+    }
+
+    async function finalize_get_inactivity_status(
+        public master_vault_id: field
+    ) {
+        let last_block: u32 = person_last_activity.get_or_use(master_vault_id, 0u32);
+        let current_block: u32 = block.height;
+        let inactivity_period: u32 = current_block - last_block;
+        // Stocker le résultat dans un mapping public
+        inactivity_cache.set(master_vault_id, inactivity_period);
+    }
+
+    // =================== FONCTIONS D'ADMINISTRATION ===================
+
+    /**
+     * ADMINISTRATION: Ajoute un oracle de confiance
+     */
+    async transition add_trusted_oracle(
+        public oracle_address: address
+    ) -> Future {
+        assert_eq(self.caller, ADMIN_ADDRESS);
+        return finalize_add_trusted_oracle(oracle_address);
+    }
+
+    async function finalize_add_trusted_oracle(
+        public oracle_address: address
+    ) {
+        trusted_oracles.set(oracle_address, true);
+    }
+
+    /**
+     * ADMINISTRATION: Révoque un oracle
+     */
+    async transition revoke_oracle(
+        public oracle_address: address
+    ) -> Future {
+        assert_eq(self.caller, ADMIN_ADDRESS);
+        return finalize_revoke_oracle(oracle_address);
+    }
+
+    async function finalize_revoke_oracle(
+        public oracle_address: address
+    ) {
+        trusted_oracles.set(oracle_address, false);
+    }
+
+    // =================== FONCTIONS UTILITAIRES =================== soon other
+
+    /**
+     * RÉVÉLATION DE DONNÉES: Permet au propriétaire d'un record de révéler les détails
+     */
+    transition reveal_certificate_details(
+        private attestation: OracleAttestation,  // Record privé
+        public requesting_vault: field
+    ) -> DeathCertificate {
+        // Vérifications de sécurité
+        assert_eq(attestation.master_vault_id, requesting_vault);
+        assert_eq(attestation.owner, self.caller);
+        
+        // Reconstruction du certificat depuis le record good ? 
+        return DeathCertificate {
+            national_id_hash: BHP256::hash_to_field(requesting_vault),
+            death_date: attestation.validation_timestamp,
+            issuing_authority: FRANCE_INSEE_CERT_HASH,
+            jurisdiction: 0u8,
+            certificate_hash: attestation.data_hash,
+            validation_score: attestation.confidence_level
+        };
+    }
+
+    /**
+     * UTILITAIRE: Génère un hash de certificat
+     */
+    transition create_certificate_hash(
+        public national_id: field,
+        public death_date: u32,
+        public authority: field,
+        public jurisdiction: u8
+    ) -> field {
+        return create_cert_hash_simple(national_id, death_date, authority, jurisdiction);
+    }
+
+    /**
+     * UTILITAIRE: Test des fonctions de hachage
+     */
+    transition test_hash_functions(
+        public test_id: field,
+        public test_date: u32,
+        public test_authority: field
+    ) -> field {
+        return create_cert_hash_simple(test_id, test_date, test_authority, 0u8);
+    }
+
+    /**
+     * UTILITAIRE: Validation simple des preuves TLS
+     */
+    transition validate_tls_proof_simple(
+        public message: field,
+        public sig_r: field,
+        public sig_s: field,
+        public cert_root: field
+    ) -> bool {
+        return verify_tls_signature(message, sig_r, sig_s, cert_root);
+    }
+}

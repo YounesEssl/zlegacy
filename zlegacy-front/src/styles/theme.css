@@ -1,0 +1,108 @@
+:root {
+  /* Base Colors - Dark Theme (Default) */
+  --bg-primary: #121212;
+  --bg-secondary: #1e1e1e;
+  --bg-tertiary: #242424;
+  --bg-accent: rgba(59, 130, 246, 0.1);
+
+  /* Text Colors */
+  --text-primary: #ffffff;
+  --text-secondary: #a0aec0;
+  --text-muted: #6b7280;
+
+  /* Border Colors */
+  --border-color: #2d3748;
+  --border-light: #374151;
+
+  /* Accent Colors */
+  --accent-primary: #3b82f6;
+  --accent-secondary: #4f46e5;
+  --accent-tertiary: #10b981;
+  --accent-error: #ef4444;
+
+  /* Card and Panel Colors */
+  --card-bg: #1a1a1a;
+  --card-border: #2d3748;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+}
+
+/* Light Theme Variables - Version améliorée plus douce pour les yeux */
+html[data-theme="light"],
+.light-theme {
+  /* Base Colors - Tons plus doux et moins blancs */
+  --bg-primary: #eef2f7; /* Fond principal légèrement bleuté */
+  --bg-secondary: #e9edf2; /* Fond secondaire encore plus doux */
+  --bg-tertiary: #dfe5ed; /* Fond tertiaire avec une teinte bleue légère */
+  --bg-accent: rgba(59, 130, 246, 0.08);
+
+  /* Text Colors - Moins contrastés pour réduire la fatigue oculaire */
+  --text-primary: #334155; /* Gris foncé bleuté plutôt que noir */
+  --text-secondary: #64748b; /* Gris moyen pour la lisibilité */
+  --text-muted: #94a3b8; /* Gris clair pour le texte discret */
+
+  /* Border Colors - Plus doux */
+  --border-color: #d1dae6; /* Bordures plus prononcées */
+  --border-light: #e2e8f0; /* Bordures légères */
+
+  /* Accent Colors - Versions plus douces des teintes originales */
+  --accent-primary: #4b83db; /* Bleu moins saturé */
+  --accent-secondary: #6366f1; /* Violet-bleu plus doux */
+  --accent-tertiary: #34d399; /* Vert moins saturé */
+  --accent-error: #f87171; /* Rouge plus doux */
+
+  /* Card and Panel Colors - Moins agressifs */
+  --card-bg: #f1f5f9; /* Légèrement teinté plutôt que blanc pur */
+  --card-border: #d1dae6; /* Bordure plus visible */
+
+  /* Shadows - Plus subtils */
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.07);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.05);
+}
+
+/* Apply these variables to the body for global styles */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Common card/container styling */
+.nexa-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-md);
+}
+
+/* Common button styling */
+.nexa-button {
+  background-color: var(--accent-primary);
+  color: white;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.nexa-button:hover {
+  background-color: var(--accent-secondary);
+}
+
+/* Form elements */
+input,
+textarea,
+select {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 0.5rem;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent-primary);
+}

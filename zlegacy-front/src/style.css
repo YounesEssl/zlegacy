@@ -1,0 +1,305 @@
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+#app {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.vanilla:hover {
+  filter: drop-shadow(0 0 2em #3178c6aa);
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+
+/* Animations pour le bouton Proof of Life */
+@keyframes pulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+
+@keyframes pulse-wave {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* Animation pour l'effet de vague du liquide */
+@keyframes wave {
+  0% {
+    transform: translateX(-50%) translateY(0) scaleY(1);
+  }
+  25% {
+    transform: translateX(-25%) translateY(-5px) scaleY(0.8);
+  }
+  50% {
+    transform: translateX(0%) translateY(0) scaleY(1);
+  }
+  75% {
+    transform: translateX(25%) translateY(-5px) scaleY(0.8);
+  }
+  100% {
+    transform: translateX(50%) translateY(0) scaleY(1);
+  }
+}
+
+/* Animations pour l'effet d'eau */
+
+/* Animation pour l'ondulation */
+.wave {
+  position: absolute;
+  width: 100%;
+  height: 10px;
+  top: -5px;
+  left: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z' opacity='.25' class='shape-fill'%3E%3C/path%3E%3Cpath d='M0,0V15.81C13,36.92,27.64,56.86,47.69,72.05,99.41,111.27,165,111,224.58,91.58c31.15-10.15,60.09-26.07,89.67-39.8,40.92-19,84.73-46,130.83-49.67,36.26-2.85,70.9,9.42,98.6,31.56,31.77,25.39,62.32,62,103.63,73,40.44,10.79,81.35-6.69,119.13-24.28s75.16-39,116.92-43.05c59.73-5.85,113.28,22.88,168.9,38.84,30.2,8.66,59,6.17,87.09-7.5,22.43-10.89,48-26.93,60.65-49.24V0Z' opacity='.5' class='shape-fill'%3E%3C/path%3E%3Cpath d='M0,0V5.63C149.93,59,314.09,71.32,475.83,42.57c43-7.64,84.23-20.12,127.61-26.46,59-8.63,112.48,12.24,165.56,35.4C827.93,77.22,886,95.24,951.2,90c86.53-7,172.46-45.71,248.8-84.81V0Z' class='shape-fill'%3E%3C/path%3E%3C/svg%3E");
+  background-size: 1200px 100%;
+  animation: wave-animation 15s linear infinite;
+}
+
+.wave.wave-top {
+  z-index: 10;
+  opacity: 1;
+  animation-delay: 0s;
+  animation-duration: 15s;
+}
+
+.wave.wave-middle {
+  z-index: 9;
+  opacity: 0.75;
+  animation-delay: -2s;
+  animation-duration: 20s;
+  top: -2px;
+}
+
+.wave.wave-bottom {
+  z-index: 8;
+  opacity: 0.5;
+  animation-delay: -4s;
+  animation-duration: 25s;
+  top: 0px;
+}
+
+@keyframes wave-animation {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 1200px 0;
+  }
+}
+
+/* Animations d'ondulation pour le liquide */
+@keyframes liquid-wave-slide {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Styles pour le composant Proof of Life qui s'adaptent au thème clair/sombre */
+.proof-of-life-title {
+  color: var(--text-primary);
+}
+
+/* Ajustements pour les thèmes clairs */
+@media (prefers-color-scheme: light) {
+  .liquid-wave-container {
+    opacity: 0.85; /* Plus opaque en mode clair */
+  }
+  
+  .proof-of-life-title {
+    color: #333;
+  }
+  
+  /* Ajuster les contrastes pour le texte en mode clair */
+  .text-primary-theme {
+    color: #333 !important;
+  }
+  
+  .text-secondary-theme {
+    color: #555 !important;
+  }
+  
+  .text-muted-theme {
+    color: #777 !important;
+  }
+  
+  /* Rendre la barre de progression plus visible en mode clair */
+  .progress-bar-theme {
+    background-color: rgba(200, 200, 200, 0.3) !important;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Animation des bulles */
+.bubble {
+  opacity: 0.7;
+  animation: bubble-rise 4s ease-in-out infinite;
+}
+
+.bubble-1 { animation-duration: 3s; }
+.bubble-2 { animation-duration: 4s; }
+.bubble-3 { animation-duration: 5s; }
+.bubble-4 { animation-duration: 3.5s; }
+
+@keyframes bubble-rise {
+  0% {
+    transform: translateY(0) scale(0.8);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateY(-40px) scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-80px) scale(0.8);
+    opacity: 0;
+  }
+}
+
+/* Animation de l'effet d'eau */
+.water-effect {
+  position: relative;
+  overflow: hidden;
+  animation: water-effect 6s ease-in-out infinite;
+}
+
+@keyframes water-effect {
+  0%, 100% {
+    box-shadow: inset 0 0 10px rgba(255,255,255,0.1);
+  }
+  50% {
+    box-shadow: inset 0 0 20px rgba(255,255,255,0.2);
+  }
+}
+
+/* Animation des bulles pour le composant LiquidWave */
+@keyframes bubble-rise {
+  0% {
+    transform: translateY(0);
+    opacity: 0.1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(-100px) scale(0.8);
+    opacity: 0;
+  }
+}
+
+.animate-bubble-1 {
+  animation: bubble-rise 3s ease-in infinite;
+}
+
+.animate-bubble-2 {
+  animation: bubble-rise 4s ease-in infinite;
+}
+
+.animate-bubble-3 {
+  animation: bubble-rise 3.5s ease-in infinite;
+}
+
+.animate-bubble-4 {
+  animation: bubble-rise 5s ease-in infinite;
+}

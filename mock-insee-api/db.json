@@ -1,0 +1,63 @@
+{
+  "personnes": [
+    {
+      "hash": "123456789012345678901234567890",
+      "death_certificate": {
+        "national_id": {
+          "hash": "123456789012345678901234567890",
+          "jurisdiction_code": 0
+        },
+        "deceased_person": {
+          "last_name_hash": "7891011121314151617181920212223",
+          "first_name_hash": "2425262728293031323334353637383",
+          "birth_date_hash": "9404142536374859602112233445"
+        },
+        "death_information": {
+          "death_date": 1715079863,
+          "death_location": {
+            "code": "75056",
+            "name": "Paris"
+          },
+          "cause_code": "R99"
+        },
+        "authority": {
+          "name": "INSEE",
+          "code": "FR-INSEE",
+          "hash": "123456789012345"
+        },
+        "certificate": {
+          "id": "FR2025052900001",
+          "issuance_date": 1715079900,
+          "hash": "5647382910111213141516171819202"
+        },
+        "verification": {
+          "score": 95,
+          "last_update": 1715079950,
+          "confirmation_level": "VERIFIED"
+        }
+      },
+      "tls_proof": {
+        "server_data": {
+          "server_cert_hash": "123456789012345",
+          "chain_root_hash": "3456789012345678",
+          "cert_expiry": 1747586205
+        },
+        "request_data": {
+          "timestamp": 1715079950,
+          "request_id": "REQ-2025-05-29-12345",
+          "nonce": "9876543210987654321098765432109876543210"
+        },
+        "response_data": {
+          "response_hash": "6789012345678901",
+          "content_type": "application/json",
+          "status_code": 200
+        },
+        "crypto_proof": {
+          "signature_r": "4567890123456789",
+          "signature_s": "7890123456789012",
+          "algorithm": "ECDSA-P256"
+        }
+      }
+    }
+  ]
+}
