@@ -7,7 +7,7 @@ interface PortfolioViewProps {
   assets: CryptoAsset[];
   beneficiaries: BeneficiaryAllocation[];
   assetAllocations: AssetAllocation[];
-  onUpdateAllocation: (assetSymbol: string, beneficiaryId: string, percentage: number) => void;
+  onUpdateAllocation: (assetSymbol: string, beneficiaryId: string, percentage: number, isPortfolioAllocation?: boolean) => void;
   validationErrors?: Record<string, string>; // Marqué comme optionnel
   onTotalExceeded?: (exceeded: boolean) => void; // Callback pour informer le parent si le total dépasse 100%
 }
@@ -23,8 +23,7 @@ const PortfolioView: React.FC<PortfolioViewProps> = ({
   // État local pour les pourcentages de portefeuille par bénéficiaire
   const [portfolioAllocations, setPortfolioAllocations] = useState<Record<string, number>>({});
   
-  // État pour suivre quel slider est en cours de glissement
-  const [draggingBeneficiaryId, setDraggingBeneficiaryId] = useState<string | null>(null);
+  // Pas besoin de tracking pour le glissement car les changements sont appliqués en temps réel
   
   // Valeur totale du portefeuille en USD
   const totalPortfolioValue = assets.reduce((sum, asset) => sum + asset.usdValue, 0);
@@ -64,15 +63,9 @@ const PortfolioView: React.FC<PortfolioViewProps> = ({
     }
   }, [assets, beneficiaries, assetAllocations, totalPortfolioValue]);
   
-  // Gérer le début du glissement
-  const handleSliderStart = (beneficiaryId: string) => {
-    setDraggingBeneficiaryId(beneficiaryId);
-  };
-
-  // Gérer la fin du glissement
-  const handleSliderEnd = () => {
-    setDraggingBeneficiaryId(null);
-  };
+  // Fonctions factices pour compatibilité avec les événements de l'UI
+  const handleSliderStart = () => {};
+  const handleSliderEnd = () => {};
 
   // Calculer le total actuel des allocations
   const calculateTotalAllocation = (allocations: Record<string, number> = portfolioAllocations) => {
@@ -95,26 +88,20 @@ const PortfolioView: React.FC<PortfolioViewProps> = ({
     newPercentage = Math.min(100, Math.max(0, Math.round(newPercentage * 10) / 10));
     
     // Calculer le changement relatif par rapport à l'allocation précédente
-    const previousPercentage = portfolioAllocations[beneficiaryId] || 0;
-    
-    // Si aucun changement, ne rien faire
-    if (newPercentage === previousPercentage) return;
-    
-    // Calculer le nouveau total si cette allocation est appliquée
-    const updatedAllocations = { ...portfolioAllocations, [beneficiaryId]: newPercentage };
-    const newTotal = calculateTotalAllocation(updatedAllocations);
+    const newAllocations = { ...portfolioAllocations, [beneficiaryId]: newPercentage };
+    const newTotal = calculateTotalAllocation(newAllocations);
     
     // Vérifier si le total dépasse 100%
-    const exceeds = newTotal > 100;
-    setTotalExceeded(exceeds);
-    
-    // Mettre à jour les allocations indépendamment des autres bénéficiaires
-    setPortfolioAllocations(updatedAllocations);
-    
-    // Appliquer ces changements aux allocations par actif
-    // Seulement si on a terminé le glissement pour éviter trop de recalculs
-    if (draggingBeneficiaryId === null && !exceeds) {
-      applyPortfolioAllocationsToAssets(updatedAllocations);
+    if (newTotal > 100.1) { // Autorise une petite marge d'erreur (0.1%) pour les erreurs d'arrondi
+      setTotalExceeded(true);
+    } else {
+      setTotalExceeded(false);
+      // Mettre à jour l'allocation pour ce bénéficiaire
+      setPortfolioAllocations(newAllocations);
+      
+      // Appliquer l'allocation de portefeuille aux actifs individuels en temps réel
+      // Cela est nécessaire pour que les allocations soient correctement affichées dans l'étape de revue
+      applyPortfolioAllocationsToAssets(newAllocations);
     }
   };
   
@@ -132,28 +119,43 @@ const PortfolioView: React.FC<PortfolioViewProps> = ({
   
   // Applique les allocations de portefeuille aux allocations par actif
   const applyPortfolioAllocationsToAssets = (newPortfolioAllocations: Record<string, number>) => {
-    // Pour chaque bénéficiaire et chaque actif
-    beneficiaries.forEach(({ beneficiary }) => {
-      const portfolioPercentage = newPortfolioAllocations[beneficiary.id] || 0;
-      
-      // Si le pourcentage est 0, mettre toutes les allocations d'actifs à 0
-      if (portfolioPercentage === 0) {
-        assets.forEach(asset => {
-          onUpdateAllocation(asset.symbol, beneficiary.id, 0);
-        });
-        return;
-      }
-      
-      // Calculer la valeur cible en USD pour ce bénéficiaire
-      const targetValueUSD = (portfolioPercentage / 100) * totalPortfolioValue;
-      
-      // Allouer proportionnellement cette valeur à travers les actifs
-      // Stratégie : allouer le même pourcentage à chaque actif
+    // Récupérer la valeur totale du portefeuille pour les calculs de proportion
+    const totalPortfolioUsdValue = assets.reduce((sum, asset) => sum + asset.usdValue, 0);
+    console.log('Total portfolio USD value:', totalPortfolioUsdValue);
+    
+    // D'abord, réinitialiser toutes les allocations existantes à 0
+    Object.keys(newPortfolioAllocations).forEach(beneficiaryId => {
       assets.forEach(asset => {
-        const assetPercentage = (targetValueUSD / totalPortfolioValue) * (100 * (asset.usdValue / totalPortfolioValue));
-        onUpdateAllocation(asset.symbol, beneficiary.id, assetPercentage);
+        onUpdateAllocation(asset.symbol, beneficiaryId, 0, true);
       });
     });
+    
+    // Ensuite, appliquer les nouvelles allocations en proportion de la valeur
+    Object.entries(newPortfolioAllocations)
+      .filter(([_, percentage]) => percentage > 0)
+      .forEach(([beneficiaryId, portfolioPercentage]) => {
+        // Calculer la valeur USD totale allouée à ce bénéficiaire
+        const allocatedUsdValue = (portfolioPercentage / 100) * totalPortfolioUsdValue;
+        console.log(`Bénéficiaire ${beneficiaryId}: ${portfolioPercentage}% = $${allocatedUsdValue}`);
+        
+        // Pour chaque actif, calculer la portion qui correspond à sa part du portefeuille
+        assets.forEach(asset => {
+          // La proportion de cet actif dans le portefeuille total
+          const assetProportion = totalPortfolioUsdValue > 0 ? asset.usdValue / totalPortfolioUsdValue : 0;
+          
+          // Le pourcentage de l'actif à allouer est le même que le pourcentage global du portefeuille
+          // C'est-à-dire qu'on alloue le même pourcentage de chaque actif 
+          // Par exemple, si on alloue 50% du portefeuille, on alloue 50% de chaque actif
+          const assetAllocationPercentage = portfolioPercentage;
+          
+          console.log(`Asset ${asset.symbol}: proportion=${assetProportion.toFixed(4)}, allocation=${assetAllocationPercentage}%`);
+          
+          // Mise à jour de l'allocation pour cet actif
+          onUpdateAllocation(asset.symbol, beneficiaryId, assetAllocationPercentage, true);
+        });
+      });
+    
+    console.log('Portfolio allocations applied to assets:', newPortfolioAllocations);
   };
   
   // Calcul du total alloué
@@ -331,8 +333,8 @@ const PortfolioView: React.FC<PortfolioViewProps> = ({
                       step="0.1"
                       value={percentage}
                       onChange={(e) => handlePortfolioAllocationChange(beneficiary.id, parseFloat(e.target.value))}
-                      onMouseDown={() => handleSliderStart(beneficiary.id)}
-                      onTouchStart={() => handleSliderStart(beneficiary.id)}
+                      onMouseDown={handleSliderStart}
+                      onTouchStart={handleSliderStart}
                       onMouseUp={handleSliderEnd}
                       onTouchEnd={handleSliderEnd}
                       onKeyUp={handleSliderEnd}

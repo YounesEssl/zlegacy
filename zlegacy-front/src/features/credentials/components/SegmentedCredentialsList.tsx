@@ -18,8 +18,10 @@ export const SegmentedCredentialsList: React.FC<SegmentedCredentialsListProps> =
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const [copiedField, setCopiedField] = useState<{id: string, field: string} | null>(null);
   
-  const standardCredentials = credentials.filter(cred => cred.type === 'standard');
-  const seedphraseCredentials = credentials.filter(cred => cred.type === 'seedphrase');
+  // According to our type definition, all credentials are 'standard' type
+  const standardCredentials = credentials;
+  // Currently no seedphrase credentials as they're not supported in the type
+  const seedphraseCredentials: Credential[] = [];
   
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);

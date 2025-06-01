@@ -117,7 +117,8 @@ interface WillContextType {
   updateAssetAllocation: (
     assetSymbol: string,
     beneficiaryId: string,
-    amount: number
+    percentage: number,
+    isPortfolioAllocation?: boolean
   ) => void;
 
   // Credential allocations
@@ -288,10 +289,25 @@ export const WillProvider: React.FC<WillProviderProps> = ({
   const updateAssetAllocation = (
     assetSymbol: string,
     beneficiaryId: string,
-    amount: number
+    percentage: number,
+    isPortfolioAllocation: boolean = false
   ) => {
-    // Find the asset to get balance information
-    const percentage = 0; // This would be calculated based on asset balance
+    // Trouver l'actif correspondant pour calculer le montant en fonction du pourcentage
+    const asset = cryptoBalance?.assets?.find((a) => a.symbol === assetSymbol);
+
+    if (!asset) {
+      console.warn(`Asset ${assetSymbol} not found in crypto balance`);
+      return; // Ne pas poursuivre si l'actif n'existe pas
+    }
+
+    // Calculer le montant basé sur le pourcentage
+    const amount = (percentage / 100) * asset.balance;
+
+    console.log(
+      `Updating allocation for ${assetSymbol} to beneficiary ${beneficiaryId}: ` +
+      `${percentage}% (${amount.toFixed(8)} ${assetSymbol}) - ` +
+      `Portfolio allocation: ${isPortfolioAllocation ? 'yes' : 'no'}`
+    );
 
     setAssetAllocations((prev) => {
       // Find existing allocation

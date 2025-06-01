@@ -22,18 +22,27 @@ const BeneficiaryInput: React.FC<BeneficiaryInputProps> = ({
     return address.startsWith("aleo") && address.length >= 16;
   };
 
+  // Valider l'adresse uniquement lorsque la valeur change
   useEffect(() => {
     if (value) {
       const valid = validateAddress(value);
       setIsValid(valid);
       setErrorMessage(valid ? "" : "Invalid Aleo address format");
-      onChange(value, valid);
     } else {
       setIsValid(null);
       setErrorMessage("");
-      onChange(value, false);
     }
-  }, [value, onChange]);
+  }, [value]);
+  
+  // Notifier le parent des changements de validation
+  useEffect(() => {
+    // N'appeler onChange que lorsque isValid change, pas à chaque rendu
+    if (value) {
+      onChange(value, isValid || false);
+    } else {
+      onChange("", false);
+    }
+  }, [value, isValid]);
 
   return (
     <div className="space-y-2">

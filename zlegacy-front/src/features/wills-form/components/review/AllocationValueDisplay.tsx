@@ -59,16 +59,29 @@ const AllocationValueDisplay: React.FC<AllocationValueDisplayProps> = ({
   const detailedAllocations: DetailedAssetAllocation[] = [];
   
   if (cryptoBalance?.assets && beneficiaryAssetAllocations.length > 0) {
+    // Log pour déboguer
+    console.log('Building detailed allocations for beneficiary', beneficiaryId);
+    console.log('Asset allocations:', beneficiaryAssetAllocations);
+    
     beneficiaryAssetAllocations.forEach(allocation => {
       const asset = cryptoBalance.assets?.find(a => a.symbol === allocation.assetSymbol);
       if (asset) {
+        // Si l'allocation utilise percentage, utilisez-la directement, sinon calculez-la
+        const allocationPercentage = allocation.percentage || 0;
         const usdRate = asset.usdValue / asset.balance;
-        detailedAllocations.push({
-          symbol: asset.symbol,
-          amount: allocation.amount,
-          usdValue: allocation.amount * usdRate,
-          percentage: (allocation.amount / asset.balance) * 100
-        });
+        
+        // Calculer le montant en fonction du pourcentage si besoin
+        const allocationAmount = allocation.amount || (allocationPercentage / 100) * asset.balance;
+        
+        // Ne pas ajouter d'allocations nulles
+        if (allocationAmount > 0 || allocationPercentage > 0) {
+          detailedAllocations.push({
+            symbol: asset.symbol,
+            amount: allocationAmount,
+            usdValue: allocationAmount * usdRate,
+            percentage: allocationPercentage || (allocationAmount / asset.balance) * 100
+          });
+        }
       }
     });
 

@@ -56,8 +56,11 @@ const BeneficiariesReview: React.FC<BeneficiariesReviewProps> = ({
             
             // Déterminer le nombre d'actifs alloués à ce bénéficiaire
             const allocatedAssets = assetAllocations.filter(
-              allocation => allocation.beneficiaryId === item.beneficiary.id
+              allocation => allocation.beneficiaryId === item.beneficiary.id && allocation.amount > 0
             );
+            
+            // Log pour debug
+            console.log(`Beneficiary ${item.beneficiary.name} has ${allocatedAssets.length} allocated assets:`, allocatedAssets);
 
             return (
               <div

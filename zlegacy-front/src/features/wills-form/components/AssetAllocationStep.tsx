@@ -60,7 +60,7 @@ const AssetAllocationStep: React.FC<{
 
   // Active tab
   const [activeTab, setActiveTab] = useState<"assets" | "beneficiaries" | "portfolio">(
-    "assets"
+    "portfolio"
   );
 
   // State for search query
@@ -103,7 +103,8 @@ const AssetAllocationStep: React.FC<{
   const handleUpdateAssetAllocation = (
     assetSymbol: string,
     beneficiaryId: string,
-    percentage: number
+    percentage: number,
+    isPortfolioAllocation: boolean = false
   ) => {
     const asset = balanceData?.assets.find((a) => a.symbol === assetSymbol);
     if (!asset) return;
@@ -115,6 +116,11 @@ const AssetAllocationStep: React.FC<{
     // Calculate amount based on percentage
     const amount = (percentage / 100) * asset.balance;
 
+    console.log(
+      `${isPortfolioAllocation ? 'PORTFOLIO' : 'DIRECT'} Allocation: ${assetSymbol} for ${beneficiaryId}: ` +
+      `${percentage}% (${amount.toFixed(8)} ${assetSymbol})`
+    );
+
     // Update local state
     setLocalAssetAllocations((prev) => {
       // Find existing allocation
@@ -123,7 +129,6 @@ const AssetAllocationStep: React.FC<{
           a.assetSymbol === assetSymbol && a.beneficiaryId === beneficiaryId
       );
 
-      // Create a new allocations array
       const newAllocations = [...prev];
 
       if (existingIndex >= 0) {
@@ -134,7 +139,7 @@ const AssetAllocationStep: React.FC<{
           percentage,
         };
       } else {
-        // Add a new allocation
+        // Add new allocation
         newAllocations.push({
           assetSymbol,
           beneficiaryId,
@@ -143,11 +148,18 @@ const AssetAllocationStep: React.FC<{
         });
       }
 
-      // Validate allocations immediately after update
+      // Validate the new allocations
       validateAllocations(newAllocations);
 
       return newAllocations;
     });
+
+    // Also update the global context with the isPortfolioAllocation flag
+    const { updateAssetAllocation } = useWill();
+    if (updateAssetAllocation) {
+      // Utiliser directement la fonction du contexte avec tous les paramètres
+      updateAssetAllocation(assetSymbol, beneficiaryId, percentage, isPortfolioAllocation);
+    }
   };
 
   // Validate all allocations

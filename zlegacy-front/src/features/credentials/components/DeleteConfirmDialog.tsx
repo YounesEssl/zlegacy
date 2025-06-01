@@ -78,7 +78,7 @@ export const DeleteConfirmDialog: React.FC<DeleteConfirmDialogProps> = ({
                 className="font-medium"
                 style={{ color: "var(--text-primary)" }}
               >
-                {credential.title || "This credential"}
+                {credential.name || "This credential"}
               </p>
               <p
                 className="text-sm"

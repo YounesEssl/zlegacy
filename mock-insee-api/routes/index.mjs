@@ -1,21 +1,14 @@
 import express from "express";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
 import { Low } from "lowdb";
 import { JSONFile } from "lowdb/node";
 
 const router = express.Router();
 
-// Configure lowdb to use JSON file
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const file = "db.json";
 const adapter = new JSONFile(file);
-
-// Initialize with default data structure
 const defaultData = { personnes: [] };
 const db = new Low(adapter, defaultData);
 
-// Read data from JSON file
 await db.read();
 
 router.get("/deces/certificate/:hash", (req, res) => {

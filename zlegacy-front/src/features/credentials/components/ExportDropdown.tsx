@@ -27,8 +27,8 @@ export const ExportDropdown: React.FC<ExportDropdownProps> = ({ credentials }) =
   // Fonction pour exporter au format JSON
   const handleJsonExport = () => {
     try {
-      // Préparation des données à exporter (sans id et lastUpdated)
-      const dataToExport = credentials.map(({ id, lastUpdated, ...rest }) => rest);
+      // Préparation des données à exporter (sans id et updatedAt)
+      const dataToExport = credentials.map(({ id, updatedAt, ...rest }) => rest);
       
       // Conversion en JSON et création du Blob
       const jsonData = JSON.stringify(dataToExport, null, 2);
@@ -58,8 +58,8 @@ export const ExportDropdown: React.FC<ExportDropdownProps> = ({ credentials }) =
   // Fonction pour exporter au format CSV
   const handleCsvExport = () => {
     try {
-      // Préparation des données à exporter (sans id et lastUpdated)
-      const dataToExport = credentials.map(({ id, lastUpdated, ...rest }) => rest);
+      // Préparation des données à exporter (sans id et updatedAt)
+      const dataToExport = credentials.map(({ id, updatedAt, ...rest }) => rest);
       
       // Récupérer toutes les clés possibles
       const allKeys = new Set<string>();

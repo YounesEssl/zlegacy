@@ -1,5 +1,15 @@
 // Types pour le système wallet Aleo
 
+// User related types
+export interface UserData {
+  id?: string;
+  walletAddress: string;
+  firstName: string | null;
+  lastName: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // Types pour le système Proof of Life
 /**
  * Données de preuve de vie
@@ -33,6 +43,17 @@ export interface TransactionStatusResponse {
   error?: string;
 }
 
+/**
+ * User state for the wallet context
+ */
+export interface UserState {
+  isRegistered: boolean;
+  isRegistrationModalOpen: boolean;
+  userData: UserData | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
 export interface WalletContextType {
   submitHeartbeat: () => Promise<{
     success: boolean;
@@ -49,4 +70,10 @@ export interface WalletContextType {
   lastSubmissionData: LastSubmissionData;
   walletConnected: boolean;
   publicKey: string | null;
+  
+  // User registration
+  userState: UserState;
+  registerUser: (firstName: string, lastName: string) => Promise<boolean>;
+  openRegistrationModal: () => void;
+  closeRegistrationModal: () => void;
 }

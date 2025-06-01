@@ -27,23 +27,18 @@ const mobileNavItems = [
   { label: "Settings", icon: Cog6ToothIcon, route: "settings" },
 ];
 
-// Note: testament data is now managed in DashboardComponent
-
 const HomePage: React.FC = () => {
-  // Utiliser le hook useWallet pour récupérer l'adresse publique (utilisé pour CreateTestamentForm)
   const { publicKey } = useWallet();
 
-  // Utiliser les paramètres d'URL pour la navigation
   const navigate = useNavigate();
   const { page = "dashboard" } = useParams<{ page: string }>();
 
-  // Vérifier le type de page en fonction de l'URL
   const location = useLocation();
-  const isEditPage = location.pathname.startsWith('/wills/edit/');
+  const isEditPage = location.pathname.startsWith("/wills/edit/");
   const isDetailsPage = location.pathname.match(/^\/wills\/[^/]+$/);
-  const willId = (isEditPage || isDetailsPage) ? location.pathname.split('/').pop() : null;
+  const willId =
+    isEditPage || isDetailsPage ? location.pathname.split("/").pop() : null;
 
-  // Valider que la page est valide
   const validPages = [
     "dashboard",
     "create",
@@ -55,14 +50,17 @@ const HomePage: React.FC = () => {
     "history",
     "docs",
   ];
-  const active = isDetailsPage ? "willDetails" : (isEditPage ? "edit" : (validPages.includes(page) ? page : "dashboard"));
+  const active = isDetailsPage
+    ? "willDetails"
+    : isEditPage
+    ? "edit"
+    : validPages.includes(page)
+    ? page
+    : "dashboard";
 
-  // Fonction pour changer la page active
   const setActive = (route: string) => {
     navigate(`/${route}`);
   };
-
-  // We track connectivity status but don't currently use it in the UI
   useEffect(() => {
     const handleOnline = () => console.log("Application is online");
     const handleOffline = () => console.log("Application is offline");
@@ -74,7 +72,6 @@ const HomePage: React.FC = () => {
     };
   }, []);
 
-  // Bottom nav for mobile and tablets
   const BottomNav = () => (
     <nav
       className="fixed bottom-0 left-0 right-0 flex lg:hidden justify-around border-t py-2 z-40"
@@ -111,13 +108,11 @@ const HomePage: React.FC = () => {
           className="flex-1 flex flex-col items-center px-4 pt-6 pb-24 md:pb-6 overflow-y-auto"
           style={{ backgroundColor: "var(--bg-secondary)" }}
         >
-          {/* Main content */}
           {active === "dashboard" && (
             <div className="w-full py-4 px-1 md:px-4">
               <DashboardComponent />
             </div>
           )}
-          {/* Placeholders for other screens */}
           {active === "create" && (
             <div className="w-full py-4 px-1 md:px-4">
               <motion.div
@@ -138,7 +133,10 @@ const HomePage: React.FC = () => {
                 transition={{ duration: 0.4 }}
                 className="max-w-[95%] mx-auto"
               >
-                <CreateWillForm testatorAddress={publicKey || ""} willIdToEdit={willId} />
+                <CreateWillForm
+                  testatorAddress={publicKey || ""}
+                  willIdToEdit={willId}
+                />
               </motion.div>
             </div>
           )}

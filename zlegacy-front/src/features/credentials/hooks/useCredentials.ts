@@ -1,124 +1,110 @@
 import { useState, useCallback, useEffect } from "react";
-import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
-
-export type CredentialType = 'standard' | 'seedphrase';
-
-export type Credential = {
-  id: string;
-  title: string;
-  type: CredentialType;
-  username: string;
-  password: string;
-  website?: string;
-  notes?: string;
-  lastUpdated: string;
-  // Fields specific to seedphrases
-  walletType?: string;
-  seedphrase?: string;
-  derivationPath?: string;
-};
-
-export type ImportFormat = {
-  title?: string;
-  name?: string;
-  username?: string;
-  user?: string;
-  email?: string;
-  password?: string;
-  website?: string;
-  url?: string;
-  notes?: string;
-};
+import { useWalletCustom } from "../../../contexts/wallet/context";
+import type { Credential, NewCredentialFormData, CredentialFilters, ImportFormat } from "../types";
+export type { Credential, NewCredentialFormData, CredentialFilters, ImportFormat };
+import { 
+  getCredentials as apiGetCredentials,
+  createCredential as apiCreateCredential,
+  updateCredential as apiUpdateCredential,
+  deleteCredential as apiDeleteCredential,
+  getDecryptedField as apiGetDecryptedField
+} from "../../../api/credentialApi";
 
 export const useCredentials = () => {
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { connected, publicKey } = useWallet();
+  const [initialLoad, setInitialLoad] = useState(true);
+  const { publicKey, walletConnected: connected } = useWalletCustom();
   
-  // Mock data to display when the user is not connected
+  // Mock data pour afficher quand l'utilisateur n'est pas connecté
   const mockCredentials: Credential[] = [
     {
       id: "1",
-      title: "Gmail",
+      name: "Exemple de credential",
       type: "standard",
-      username: "john.doe@gmail.com",
-      password: "ExampleP@ss123!",
-      website: "https://gmail.com",
-      notes: "Account principal",
-      lastUpdated: new Date().toISOString(),
+      username: "utilisateur@exemple.com",
+      hasPassword: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      userId: "demo",
+      category: "exemple",
+      url: "https://exemple.com",
+      notes: "Ceci est un exemple de credential lorsque le portefeuille n'est pas connecté."
     },
     {
       id: "2",
-      title: "Facebook",
+      name: "Autre exemple",
       type: "standard",
-      username: "john.doe",
-      password: "FB-SecureP@ss",
-      website: "https://facebook.com",
-      lastUpdated: new Date().toISOString(),
-    },
-    {
-      id: "3",
-      title: "Amazon",
-      type: "standard",
-      username: "john.doe@email.com",
-      password: "Amz!Shopping2023",
-      website: "https://amazon.com",
-      notes: "Personal shopping account",
-      lastUpdated: new Date().toISOString(),
-    },
-    {
-      id: "4",
-      title: "Ethereum Wallet",
-      type: "seedphrase",
-      username: "Main ETH Wallet",
-      password: "", // No password as we use the seedphrase instead
-      walletType: "Ethereum",
-      seedphrase: "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12",
-      derivationPath: "m/44'/60'/0'/0/0",
-      notes: "Main wallet for ETH funds",
-      lastUpdated: new Date().toISOString(),
+      username: "autre@exemple.com",
+      hasPassword: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      userId: "demo",
+      category: "exemple",
+      url: "https://autre-exemple.com",
+      notes: "Un autre exemple de credential."
     }
   ];
 
+  // Fonction pour récupérer les credentials
   const fetchCredentials = useCallback(async () => {
     setIsLoading(true);
-    setError(null);
-
+    
     try {
-      // If the wallet is not connected, display mock data
-      if (!connected || !publicKey) {
-        // Simulate a delay for the interface
+      if (connected && publicKey) {
+        // Charger les credentials depuis l'API
+        try {
+          const fetchedCredentials = await apiGetCredentials(publicKey);
+          setCredentials(fetchedCredentials);
+          setError(null);
+        } catch (error: unknown) {
+          const apiError = error as Error;
+          console.error('Erreur lors de la récupération des credentials:', apiError);
+          setError(`Erreur API: ${apiError.message || 'Impossible de récupérer les credentials'}`);
+        }
+      } else {
+        // Simuler un délai pour l'interface
         await new Promise((resolve) => setTimeout(resolve, 500));
         
-        // Afficher les données fictives sans message d'erreur
+        // Afficher les données fictives uniquement si non connecté
         setCredentials(mockCredentials);
-        // We set the error only to indicate the state at the hook level
-        // but we won't display it in the interface
         setError("Wallet not connected");
-      } else {
-        // When the wallet is connected, simulate data retrieval
-        // In a real case, we would make an API call to Aleo
-        await new Promise((resolve) => setTimeout(resolve, 800));
-
-        // For the demo, we return an empty array when the wallet is connected
-        // Cela montrera l'état vide comme demandé
-        setCredentials([]);
       }
     } catch (err) {
       console.error("Error fetching credentials:", err);
       setError("Failed to load credentials");
+      setCredentials(mockCredentials);
     } finally {
       setIsLoading(false);
     }
   }, [connected, publicKey]);
 
+  // Effet pour attendre la connexion du wallet avant de charger les données
   useEffect(() => {
-    fetchCredentials();
-  }, [fetchCredentials]);
+    if (initialLoad) {
+      if (connected && publicKey) {
+        fetchCredentials();
+        setInitialLoad(false);
+      } else {
+        const timer = setTimeout(() => {
+          fetchCredentials();
+          setInitialLoad(false);
+        }, 1500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [connected, publicKey, initialLoad, fetchCredentials]);
+  
+  // Effet pour recharger les données quand le wallet change après le chargement initial
+  useEffect(() => {
+    if (!initialLoad) {
+      fetchCredentials();
+    }
+  }, [connected, publicKey, initialLoad, fetchCredentials]);
 
   const addCredential = useCallback(
-    async (credential: Omit<Credential, "id" | "lastUpdated">) => {
+    async (credential: NewCredentialFormData) => {
       if (!connected || !publicKey) {
         setError("Wallet not connected");
         return false;
@@ -128,17 +114,22 @@ export const useCredentials = () => {
       setError(null);
 
       try {
-        // Simulate an Aleo call to store encrypted credentials
-        await new Promise((resolve) => setTimeout(resolve, 600));
-
-        const newCredential: Credential = {
-          ...credential,
-          id: Date.now().toString(),
-          type: credential.type || "standard",
-          lastUpdated: new Date().toISOString(),
+        // Tous les credentials sont de type standard
+        const createData: NewCredentialFormData = {
+          name: credential.name,
+          type: "standard",
+          username: credential.username,
+          password: credential.password,
+          url: credential.url,
+          notes: credential.notes,
+          category: credential.category || 'general'
         };
 
-        setCredentials((prev) => [...prev, newCredential]);
+        // Appeler l'API pour créer le credential
+        const createdCredential = await apiCreateCredential(publicKey, createData);
+
+        // Mettre à jour l'état local
+        setCredentials((prev) => [...prev, createdCredential]);
         return true;
       } catch (err) {
         console.error("Error adding credential:", err);
@@ -152,7 +143,7 @@ export const useCredentials = () => {
   );
 
   const updateCredential = useCallback(
-    async (id: string, updates: Partial<Credential>) => {
+    async (id: string, credential: Partial<NewCredentialFormData>) => {
       if (!connected || !publicKey) {
         setError("Wallet not connected");
         return false;
@@ -162,20 +153,25 @@ export const useCredentials = () => {
       setError(null);
 
       try {
-        // Simulate an Aleo call to update encrypted credentials
-        await new Promise((resolve) => setTimeout(resolve, 600));
+        // Préparer les données pour la mise à jour (seulement les champs non-null/undefined)
+        const updateData: Partial<NewCredentialFormData> = {};
 
+        if (credential.name !== undefined) updateData.name = credential.name;
+        if (credential.type !== undefined) updateData.type = "standard";
+        if (credential.username !== undefined) updateData.username = credential.username;
+        if (credential.password !== undefined) updateData.password = credential.password;
+        if (credential.url !== undefined) updateData.url = credential.url;
+        if (credential.notes !== undefined) updateData.notes = credential.notes;
+        if (credential.category !== undefined) updateData.category = credential.category;
+
+        // Appeler l'API pour mettre à jour le credential
+        const updatedCredential = await apiUpdateCredential(publicKey, id, updateData);
+
+        // Mettre à jour l'état local
         setCredentials((prev) =>
-          prev.map((cred) =>
-            cred.id === id
-              ? {
-                  ...cred,
-                  ...updates,
-                  lastUpdated: new Date().toISOString(),
-                }
-              : cred
-          )
+          prev.map((cred) => (cred.id === id ? updatedCredential : cred))
         );
+
         return true;
       } catch (err) {
         console.error("Error updating credential:", err);
@@ -199,9 +195,10 @@ export const useCredentials = () => {
       setError(null);
 
       try {
-        // Simulate an Aleo call to delete credentials
-        await new Promise((resolve) => setTimeout(resolve, 400));
+        // Appeler l'API pour supprimer le credential
+        await apiDeleteCredential(publicKey, id);
 
+        // Mettre à jour l'état local
         setCredentials((prev) => prev.filter((cred) => cred.id !== id));
         return true;
       } catch (err) {
@@ -216,7 +213,7 @@ export const useCredentials = () => {
   );
 
   const importCredentials = useCallback(
-    async (importedData: ImportFormat[]) => {
+    async (importedData: any[]) => {
       if (!connected || !publicKey) {
         setError("Wallet not connected");
         return false;
@@ -226,21 +223,24 @@ export const useCredentials = () => {
       setError(null);
 
       try {
-        // Simulate an Aleo call to store imported credentials
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        const newCredentials: Credential[] = importedData.map((item) => ({
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          title: item.title || item.name || "Untitled",
-          type: "standard", // By default, imported credentials are of standard type
+        // Convertir les données importées au nouveau format
+        const newCredentialsData: NewCredentialFormData[] = importedData.map((item) => ({
+          name: item.title || item.name || "Untitled",
+          type: "standard",
           username: item.username || item.user || item.email || "",
           password: item.password || "",
-          website: item.website || item.url || "",
+          url: item.website || item.url || "",
           notes: item.notes || "",
-          lastUpdated: new Date().toISOString(),
+          category: item.category || "imported"
         }));
 
-        setCredentials((prev) => [...prev, ...newCredentials]);
+        // Créer chaque credential via l'API
+        const createdCredentials = await Promise.all(
+          newCredentialsData.map(cred => apiCreateCredential(publicKey, cred))
+        );
+
+        // Mettre à jour l'état local
+        setCredentials((prev) => [...prev, ...createdCredentials]);
         return true;
       } catch (err) {
         console.error("Error importing credentials:", err);
@@ -253,6 +253,57 @@ export const useCredentials = () => {
     [connected, publicKey]
   );
 
+  // Fonction pour récupérer une donnée sensible déchiffrée
+  const getDecryptedField = useCallback(
+    async (id: string, fieldName: 'password') => {
+      if (!connected || !publicKey) {
+        setError("Wallet not connected");
+        return null;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // Appeler l'API pour déchiffrer le champ demandé
+        const decryptedValue = await apiGetDecryptedField(publicKey, id, fieldName);
+        return decryptedValue;
+      } catch (err) {
+        console.error(`Error getting decrypted ${fieldName}:`, err);
+        setError(`Failed to get ${fieldName}`);
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [connected, publicKey]
+  );
+
+  // Filtrer les credentials par type, terme de recherche et catégorie
+  const filterCredentials = useCallback(
+    (filters: CredentialFilters) => {
+      if (!credentials.length) return [];
+      
+      return credentials.filter((cred) => {
+        // Filtre par terme de recherche
+        const searchMatch = !filters.searchTerm || 
+          cred.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+          (cred.username && cred.username.toLowerCase().includes(filters.searchTerm.toLowerCase())) ||
+          (cred.url && cred.url.toLowerCase().includes(filters.searchTerm.toLowerCase())) ||
+          (cred.notes && cred.notes.toLowerCase().includes(filters.searchTerm.toLowerCase()));
+        
+        // Filtre par catégorie
+        const categoryMatch = !filters.category || filters.category === 'all' || cred.category === filters.category;
+        
+        // Tous les credentials sont de type standard
+        const typeMatch = !filters.type || filters.type === 'all' || cred.type === filters.type;
+        
+        return searchMatch && categoryMatch && typeMatch;
+      });
+    },
+    [credentials]
+  );
+
   return {
     credentials,
     isLoading,
@@ -261,6 +312,8 @@ export const useCredentials = () => {
     updateCredential,
     deleteCredential,
     importCredentials,
+    getDecryptedField,
+    filterCredentials,
     refreshCredentials: fetchCredentials,
   };
 };

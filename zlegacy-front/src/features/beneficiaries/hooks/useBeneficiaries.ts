@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import type { Beneficiary, NewBeneficiaryFormData } from '../types';
-import { generateUniqueId, getRelationColor } from '../utils/beneficiaryUtils';
+import { getBeneficiaries as apiGetBeneficiaries, createBeneficiary as apiCreateBeneficiary, updateBeneficiary as apiUpdateBeneficiary, deleteBeneficiary as apiDeleteBeneficiary } from '../../../api/beneficiaryApi';
+import { useWalletCustom } from '../../../contexts/wallet/context';
 
 export const useBeneficiaries = () => {
+  // Utiliser le contexte du wallet pour obtenir l'adresse et le statut de connexion
+  const { publicKey: account, walletConnected: isConnected } = useWalletCustom();
   // Obtenir les paramètres de l'URL
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
@@ -26,7 +29,6 @@ export const useBeneficiaries = () => {
     email: '',
     phone: '',
     notes: '',
-    relation: 'family', // Relation par défaut
     isAddressValid: false,
   });
 
@@ -62,15 +64,17 @@ export const useBeneficiaries = () => {
     }
   }, [searchParams]);
 
-  // Charger les données de bénéficiaires (mock ou réelles)
-  const loadBeneficiaries = (isConnected: boolean, publicKey?: string) => {
-    // Si l'utilisateur est connecté, nous n'affichons pas de données fictives
-    if (isConnected && publicKey) {
-      setBeneficiaries([]);
-      setFilteredBeneficiaries([]);
-    } else {
-      // Dans une vraie application, ce serait un appel API
-      // Pour les utilisateurs non connectés, nous affichons des données de démonstration
+  // État pour les opérations asynchrones
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Charger les données de bénéficiaires depuis l'API
+  const loadBeneficiaries = async () => {
+    // Réinitialiser les états d'erreur
+    setError(null);
+    
+    if (!isConnected || !account) {
+      // Si l'utilisateur n'est pas connecté, nous affichons des données de démonstration
       const mockBeneficiaries: Beneficiary[] = [
         {
           id: '1',
@@ -96,6 +100,23 @@ export const useBeneficiaries = () => {
 
       setBeneficiaries(mockBeneficiaries);
       setFilteredBeneficiaries(mockBeneficiaries);
+      return;
+    }
+    
+    // Sinon, nous récupérons les bénéficiaires réels depuis l'API
+    try {
+      setIsLoading(true);
+      const data = await apiGetBeneficiaries(account);
+      setBeneficiaries(data);
+      setFilteredBeneficiaries(data);
+    } catch (err) {
+      console.error('Erreur lors du chargement des bénéficiaires:', err);
+      setError('Impossible de charger les bénéficiaires. Veuillez réessayer.');
+      // En cas d'erreur, nous initialisons avec un tableau vide
+      setBeneficiaries([]);
+      setFilteredBeneficiaries([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -143,91 +164,141 @@ export const useBeneficiaries = () => {
   };
 
   // Fonction pour sauvegarder les modifications d'un bénéficiaire
-  const handleSaveBeneficiary = (updatedBeneficiary: Beneficiary) => {
-    // Dans une vraie application, ce serait un appel API
-    // Pour l'instant, nous mettons simplement à jour l'état local
-    const updatedBeneficiaries = beneficiaries.map(b =>
-      b.id === updatedBeneficiary.id ? updatedBeneficiary : b
-    );
-
-    setBeneficiaries(updatedBeneficiaries);
-    setFilteredBeneficiaries(
-      filteredBeneficiaries.map(b =>
-        b.id === updatedBeneficiary.id ? updatedBeneficiary : b
-      )
-    );
-
-    // Si le bénéficiaire mis à jour est le bénéficiaire actuellement sélectionné,
-    // nous mettons également à jour l'état sélectionné
-    if (selectedBeneficiary && selectedBeneficiary.id === updatedBeneficiary.id) {
-      setSelectedBeneficiary(updatedBeneficiary);
+  const handleSaveBeneficiary = async (updatedBeneficiary: Beneficiary) => {
+    // Vérifier que l'utilisateur est connecté
+    if (!isConnected || !account) {
+      console.error('User not connected');
+      setError('Vous devez être connecté pour mettre à jour un bénéficiaire');
+      return;
     }
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Appel à l'API pour mettre à jour le bénéficiaire
+      const savedBeneficiary = await apiUpdateBeneficiary(account, updatedBeneficiary.id, updatedBeneficiary);
+      
+      // Mettre à jour la liste des bénéficiaires
+      const updatedBeneficiaries = beneficiaries.map(b =>
+        b.id === savedBeneficiary.id ? savedBeneficiary : b
+      );
 
-    setIsEditingBeneficiary(false);
-    setBeneficiaryToEdit(null);
+      setBeneficiaries(updatedBeneficiaries);
+      setFilteredBeneficiaries(
+        filteredBeneficiaries.map(b =>
+          b.id === savedBeneficiary.id ? savedBeneficiary : b
+        )
+      );
+
+      // Si le bénéficiaire mis à jour est le bénéficiaire actuellement sélectionné,
+      // nous mettons également à jour l'état sélectionné
+      if (selectedBeneficiary && selectedBeneficiary.id === savedBeneficiary.id) {
+        setSelectedBeneficiary(savedBeneficiary);
+      }
+
+      setIsEditingBeneficiary(false);
+      setBeneficiaryToEdit(null);
+      
+    } catch (err) {
+      console.error('Erreur lors de la mise à jour du bénéficiaire:', err);
+      setError('Impossible de mettre à jour le bénéficiaire. Veuillez réessayer.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Ajouter un nouveau bénéficiaire
-  const handleAddBeneficiary = () => {
+  const handleAddBeneficiary = async () => {
     // Validation
     if (
       !newBeneficiary.name.trim() ||
       !newBeneficiary.address.trim() ||
       !newBeneficiary.isAddressValid
     ) {
-      // Dans une application réelle, vous voudriez afficher un message d'erreur
       console.error('Validation failed');
       return;
     }
 
-    // Création d'un nouveau bénéficiaire
-    const beneficiary: Beneficiary = {
-      id: generateUniqueId(), // Dans une vraie app, l'ID viendrait du backend
-      name: newBeneficiary.name.trim(),
-      address: newBeneficiary.address.trim(),
-      email: newBeneficiary.email.trim(),
-      phone: newBeneficiary.phone.trim(),
-      notes: newBeneficiary.notes.trim(),
-      relation: newBeneficiary.relation,
-      relationColor: getRelationColor(newBeneficiary.relation),
-      createdAt: new Date().toISOString().split('T')[0],
-      allocation: 0,
-      wills: 0,
-    };
+    // Vérifier que l'utilisateur est connecté
+    if (!isConnected || !account) {
+      console.error('User not connected');
+      setError('Vous devez être connecté pour ajouter un bénéficiaire');
+      return;
+    }
 
-    // Dans une vraie application, ce serait un appel API
-    // Pour l'instant, nous mettons simplement à jour l'état local
-    const updatedBeneficiaries = [...beneficiaries, beneficiary];
-    setBeneficiaries(updatedBeneficiaries);
-    setFilteredBeneficiaries(updatedBeneficiaries);
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Appel à l'API pour créer le bénéficiaire
+      const createdBeneficiary = await apiCreateBeneficiary(account, {
+        name: newBeneficiary.name.trim(),
+        address: newBeneficiary.address.trim(),
+        email: newBeneficiary.email.trim(),
+        phone: newBeneficiary.phone.trim(),
+        notes: newBeneficiary.notes.trim(),
+        isAddressValid: true, // Nous avons déjà validé l'adresse
+      });
 
-    // Réinitialiser le formulaire
-    setNewBeneficiary({
-      name: '',
-      address: '',
-      email: '',
-      phone: '',
-      notes: '',
-      relation: 'family',
-      isAddressValid: false,
-    });
+      // Mettre à jour la liste des bénéficiaires
+      const updatedBeneficiaries = [...beneficiaries, createdBeneficiary];
+      setBeneficiaries(updatedBeneficiaries);
+      setFilteredBeneficiaries(updatedBeneficiaries);
 
-    // Fermer le modal
-    setIsAddingBeneficiary(false);
+      // Réinitialiser le formulaire
+      setNewBeneficiary({
+        name: '',
+        address: '',
+        email: '',
+        phone: '',
+        notes: '',
+        isAddressValid: false,
+      });
+
+      // Fermer le modal
+      setIsAddingBeneficiary(false);
+      
+    } catch (err) {
+      console.error('Erreur lors de l\'ajout du bénéficiaire:', err);
+      setError('Impossible d\'ajouter le bénéficiaire. Veuillez réessayer.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Supprimer un bénéficiaire
-  const handleDeleteBeneficiary = (id: string) => {
-    // Dans une vraie application, ce serait un appel API
-    // Pour l'instant, nous mettons simplement à jour l'état local
-    const updatedBeneficiaries = beneficiaries.filter(b => b.id !== id);
-    setBeneficiaries(updatedBeneficiaries);
-    setFilteredBeneficiaries(updatedBeneficiaries);
+  const handleDeleteBeneficiary = async (id: string) => {
+    // Vérifier que l'utilisateur est connecté
+    if (!isConnected || !account) {
+      console.error('User not connected');
+      setError('Vous devez être connecté pour supprimer un bénéficiaire');
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Appel à l'API pour supprimer le bénéficiaire
+      await apiDeleteBeneficiary(account, id);
+      
+      // Mettre à jour la liste des bénéficiaires
+      const updatedBeneficiaries = beneficiaries.filter(b => b.id !== id);
+      setBeneficiaries(updatedBeneficiaries);
+      setFilteredBeneficiaries(updatedBeneficiaries);
 
-    // Si le bénéficiaire supprimé est le bénéficiaire actuellement sélectionné,
-    // nous effaçons également l'état sélectionné
-    if (selectedBeneficiary && selectedBeneficiary.id === id) {
-      setSelectedBeneficiary(null);
+      // Si le bénéficiaire supprimé est le bénéficiaire actuellement sélectionné,
+      // nous effaçons également l'état sélectionné
+      if (selectedBeneficiary && selectedBeneficiary.id === id) {
+        setSelectedBeneficiary(null);
+      }
+      
+    } catch (err) {
+      console.error('Erreur lors de la suppression du bénéficiaire:', err);
+      setError('Impossible de supprimer le bénéficiaire. Veuillez réessayer.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -235,6 +306,13 @@ export const useBeneficiaries = () => {
   const handleSelectBeneficiary = (beneficiary: Beneficiary) => {
     setSelectedBeneficiary(beneficiary);
   };
+
+  // Charger les bénéficiaires au changement d'état de connexion du wallet
+  useEffect(() => {
+    if (isConnected && account) {
+      loadBeneficiaries();
+    }
+  }, [isConnected, account]);
 
   return {
     // États
@@ -246,6 +324,8 @@ export const useBeneficiaries = () => {
     selectedBeneficiary,
     beneficiaryToEdit,
     newBeneficiary,
+    isLoading,
+    error,
     
     // Actions
     loadBeneficiaries,

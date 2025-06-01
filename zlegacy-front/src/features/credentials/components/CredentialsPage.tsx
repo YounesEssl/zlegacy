@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 import { useCredentials } from "../hooks/useCredentials";
-import type { Credential } from "../hooks/useCredentials";
+import type { Credential, NewCredentialFormData } from "../types";
 
 // Import des composants modulaires
 import { PageHeader } from "./PageHeader";
@@ -38,9 +38,9 @@ export const CredentialsPage: React.FC = () => {
     if (!searchTerm.trim()) return true;
     const term = searchTerm.toLowerCase();
     return (
-      cred.title.toLowerCase().includes(term) ||
-      cred.username.toLowerCase().includes(term) ||
-      (cred.website && cred.website.toLowerCase().includes(term))
+      cred.name.toLowerCase().includes(term) ||
+      (cred.username && cred.username.toLowerCase().includes(term)) ||
+      (cred.url && cred.url.toLowerCase().includes(term))
     );
   });
 
@@ -81,7 +81,7 @@ export const CredentialsPage: React.FC = () => {
     setEditingCredential(null);
   };
 
-  const handleSubmit = async (data: Omit<Credential, "id" | "lastUpdated">) => {
+  const handleSubmit = async (data: NewCredentialFormData) => {
     if (editingCredential) {
       return updateCredential(editingCredential.id, data);
     } else {
@@ -138,6 +138,7 @@ export const CredentialsPage: React.FC = () => {
           onEdit={handleEditClick}
           onDelete={handleDeleteClick}
           onImport={importCredentials}
+          onSearch={setSearchTerm}
         />
 
         {/* Dialogue de confirmation de suppression */}

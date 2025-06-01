@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Edit2, Trash2, ExternalLink, Clock, Copy } from 'lucide-react';
-import { ToggleReveal } from './ToggleReveal';
-import type { Credential } from '../hooks/useCredentials';
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Edit2, Trash2, ExternalLink, Clock, Copy } from "lucide-react";
+import { ToggleReveal } from "./ToggleReveal";
+import type { Credential } from "../hooks/useCredentials";
 
 interface CredentialListProps {
   credentials: Credential[];
@@ -16,51 +16,57 @@ export const CredentialList: React.FC<CredentialListProps> = ({
   onDelete,
 }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
-  const [copiedField, setCopiedField] = useState<{id: string, field: string} | null>(null);
-  
+  const [visiblePasswords, setVisiblePasswords] = useState<
+    Record<string, boolean>
+  >({});
+  const [copiedField, setCopiedField] = useState<{
+    id: string;
+    field: string;
+  } | null>(null);
+
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
   };
-  
+
   const togglePasswordVisibility = (id: string) => {
-    setVisiblePasswords(prev => ({
+    setVisiblePasswords((prev) => ({
       ...prev,
-      [id]: !prev[id]
+      [id]: !prev[id],
     }));
   };
-  
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return new Intl.DateTimeFormat('default', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
+    return new Intl.DateTimeFormat("default", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
     }).format(date);
   };
-  
+
   const copyToClipboard = (text: string, id: string, field: string) => {
-    navigator.clipboard.writeText(text)
+    navigator.clipboard
+      .writeText(text)
       .then(() => {
         setCopiedField({ id, field });
         setTimeout(() => setCopiedField(null), 2000);
       })
-      .catch(err => console.error('Failed to copy: ', err));
+      .catch((err) => console.error("Failed to copy: ", err));
   };
-  
+
   const cardVariants = {
     initial: { opacity: 0, y: 20 },
     animate: { opacity: 1, y: 0 },
     exit: { opacity: 0, y: -20 },
   };
-  
+
   const listVariants = {
     initial: { opacity: 0 },
-    animate: { 
+    animate: {
       opacity: 1,
-      transition: { 
-        staggerChildren: 0.1 
-      }
+      transition: {
+        staggerChildren: 0.1,
+      },
     },
   };
 
@@ -81,7 +87,7 @@ export const CredentialList: React.FC<CredentialListProps> = ({
           variants={cardVariants}
           transition={{ duration: 0.3 }}
           className={`bg-card border border-border rounded-lg overflow-hidden shadow-sm ${
-            expandedId === credential.id ? 'ring-2 ring-primary' : ''
+            expandedId === credential.id ? "ring-2 ring-primary" : ""
           }`}
           layout
         >
@@ -90,12 +96,12 @@ export const CredentialList: React.FC<CredentialListProps> = ({
             onClick={() => toggleExpand(credential.id)}
           >
             <div className="flex-1">
-              <h3 className="font-medium text-lg">{credential.title}</h3>
+              <h3 className="font-medium text-lg">{credential.name}</h3>
               <p className="text-sm text-muted-foreground mt-1 truncate">
                 {credential.username}
               </p>
             </div>
-            
+
             <div className="flex items-center space-x-2">
               <motion.button
                 onClick={(e) => {
@@ -108,7 +114,7 @@ export const CredentialList: React.FC<CredentialListProps> = ({
               >
                 <Edit2 size={16} className="text-muted-foreground" />
               </motion.button>
-              
+
               <motion.button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -116,12 +122,12 @@ export const CredentialList: React.FC<CredentialListProps> = ({
                 }}
                 className="p-1.5 rounded-full transition-colors"
                 style={{
-                  backgroundColor: 'rgba(239, 68, 68, 0.1)',  // Rouge subtil qui fonctionne dans les deux thèmes
-                  color: '#ef4444'  // Rouge fixe pour assurer une bonne visibilité dans les deux thèmes
+                  backgroundColor: "rgba(239, 68, 68, 0.1)", // Rouge subtil qui fonctionne dans les deux thèmes
+                  color: "#ef4444", // Rouge fixe pour assurer une bonne visibilité dans les deux thèmes
                 }}
-                whileHover={{ 
+                whileHover={{
                   scale: 1.1,
-                  backgroundColor: 'rgba(239, 68, 68, 0.2)'  // Rouge un peu plus intense au survol
+                  backgroundColor: "rgba(239, 68, 68, 0.2)", // Rouge un peu plus intense au survol
                 }}
                 whileTap={{ scale: 0.9 }}
                 aria-label="Delete credential"
@@ -131,12 +137,12 @@ export const CredentialList: React.FC<CredentialListProps> = ({
               </motion.button>
             </div>
           </div>
-          
+
           <AnimatePresence>
             {expandedId === credential.id && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
+                animate={{ height: "auto", opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
                 transition={{ duration: 0.3 }}
                 className="border-t border-border"
@@ -146,13 +152,23 @@ export const CredentialList: React.FC<CredentialListProps> = ({
                     <div className="text-sm font-medium">Username</div>
                     <div className="flex items-center">
                       <motion.button
-                        onClick={() => copyToClipboard(credential.username, credential.id, 'username')}
+                        onClick={() =>
+                          credential.username &&
+                          copyToClipboard(
+                            credential.username,
+                            credential.id,
+                            "username"
+                          )
+                        }
                         className="p-1 rounded-full hover:bg-muted transition-colors"
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                       >
-                        {copiedField?.id === credential.id && copiedField?.field === 'username' ? (
-                          <span className="text-xs font-medium text-green-600 dark:text-green-400">Copied!</span>
+                        {copiedField?.id === credential.id &&
+                        copiedField?.field === "username" ? (
+                          <span className="text-xs font-medium text-green-600 dark:text-green-400">
+                            Copied!
+                          </span>
                         ) : (
                           <Copy size={14} className="text-muted-foreground" />
                         )}
@@ -160,26 +176,40 @@ export const CredentialList: React.FC<CredentialListProps> = ({
                     </div>
                   </div>
                   <div className="flex justify-between items-center bg-background dark:bg-black/20 p-2 rounded">
-                    <span className="text-foreground">{credential.username}</span>
+                    <span className="text-foreground">
+                      {credential.username}
+                    </span>
                   </div>
-                  
+
                   <div className="flex justify-between items-center">
                     <div className="text-sm font-medium">Password</div>
                     <div className="flex items-center space-x-1">
                       <motion.button
-                        onClick={() => copyToClipboard(credential.password, credential.id, 'password')}
+                        onClick={() =>
+                          credential.password &&
+                          copyToClipboard(
+                            credential.password,
+                            credential.id,
+                            "password"
+                          )
+                        }
                         className="p-1 rounded-full hover:bg-muted transition-colors"
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                       >
-                        {copiedField?.id === credential.id && copiedField?.field === 'password' ? (
-                          <span className="text-xs font-medium text-green-600 dark:text-green-400">Copied!</span>
+                        {copiedField?.id === credential.id &&
+                        copiedField?.field === "password" ? (
+                          <span className="text-xs font-medium text-green-600 dark:text-green-400">
+                            Copied!
+                          </span>
                         ) : (
                           <Copy size={14} className="text-muted-foreground" />
                         )}
                       </motion.button>
                       <ToggleReveal
-                        initialVisible={visiblePasswords[credential.id] || false}
+                        initialVisible={
+                          visiblePasswords[credential.id] || false
+                        }
                         onToggle={() => togglePasswordVisibility(credential.id)}
                         size="sm"
                       />
@@ -187,37 +217,48 @@ export const CredentialList: React.FC<CredentialListProps> = ({
                   </div>
                   <div className="flex justify-between items-center bg-background dark:bg-black/20 p-2 rounded">
                     {visiblePasswords[credential.id] ? (
-                      <span className="text-foreground">{credential.password}</span>
+                      <span className="text-foreground">
+                        {credential.password}
+                      </span>
                     ) : (
-                      <span className="text-muted-foreground">••••••••••••</span>
+                      <span className="text-muted-foreground">
+                        ••••••••••••
+                      </span>
                     )}
                   </div>
-                  
-                  {credential.website && (
+
+                  {credential.url && (
                     <>
                       <div className="flex justify-between items-center">
                         <div className="text-sm font-medium">Website</div>
                         <div className="flex items-center">
                           <motion.a
-                            href={credential.website.startsWith('http') ? credential.website : `https://${credential.website}`}
+                            href={
+                              credential.url.startsWith("http")
+                                ? credential.url
+                                : `https://${credential.url}`
+                            }
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-1 rounded-full hover:bg-muted transition-colors"
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
                           >
-                            <ExternalLink size={14} className="text-muted-foreground" />
+                            <ExternalLink
+                              size={14}
+                              className="text-muted-foreground"
+                            />
                           </motion.a>
                         </div>
                       </div>
                       <div className="bg-background dark:bg-black/20 p-2 rounded">
                         <span className="text-foreground text-sm truncate block">
-                          {credential.website}
+                          {credential.url}
                         </span>
                       </div>
                     </>
                   )}
-                  
+
                   {credential.notes && (
                     <>
                       <div className="text-sm font-medium">Notes</div>
@@ -228,10 +269,10 @@ export const CredentialList: React.FC<CredentialListProps> = ({
                       </div>
                     </>
                   )}
-                  
+
                   <div className="flex items-center text-xs text-muted-foreground pt-2 border-t border-border mt-2">
                     <Clock size={12} className="mr-1" />
-                    Last updated: {formatDate(credential.lastUpdated)}
+                    Last updated: {formatDate(credential.updatedAt)}
                   </div>
                 </div>
               </motion.div>

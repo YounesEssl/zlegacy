@@ -14,16 +14,16 @@ const AllocationTabs: React.FC<AllocationTabsProps> = ({ activeTab, setActiveTab
     >
       <button
         className={`flex-1 flex items-center justify-center py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
-          activeTab === "assets" ? "shadow-sm" : ""
+          activeTab === "portfolio" ? "shadow-sm" : ""
         }`}
-        onClick={() => setActiveTab("assets")}
+        onClick={() => setActiveTab("portfolio")}
         style={{
-          backgroundColor: activeTab === "assets" ? "var(--bg-card)" : "transparent",
-          color: activeTab === "assets" ? "var(--text-primary)" : "var(--text-secondary)",
+          backgroundColor: activeTab === "portfolio" ? "var(--bg-card)" : "transparent",
+          color: activeTab === "portfolio" ? "var(--text-primary)" : "var(--text-secondary)",
         }}
       >
-        <CurrencyDollarIcon className="w-4 h-4 mr-2" />
-        By Assets
+        <ChartPieIcon className="w-4 h-4 mr-2" />
+        Portfolio
       </button>
       <button
         className={`flex-1 flex items-center justify-center py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
@@ -40,16 +40,16 @@ const AllocationTabs: React.FC<AllocationTabsProps> = ({ activeTab, setActiveTab
       </button>
       <button
         className={`flex-1 flex items-center justify-center py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
-          activeTab === "portfolio" ? "shadow-sm" : ""
+          activeTab === "assets" ? "shadow-sm" : ""
         }`}
-        onClick={() => setActiveTab("portfolio")}
+        onClick={() => setActiveTab("assets")}
         style={{
-          backgroundColor: activeTab === "portfolio" ? "var(--bg-card)" : "transparent",
-          color: activeTab === "portfolio" ? "var(--text-primary)" : "var(--text-secondary)",
+          backgroundColor: activeTab === "assets" ? "var(--bg-card)" : "transparent",
+          color: activeTab === "assets" ? "var(--text-primary)" : "var(--text-secondary)",
         }}
       >
-        <ChartPieIcon className="w-4 h-4 mr-2" />
-        Portfolio
+        <CurrencyDollarIcon className="w-4 h-4 mr-2" />
+        By Assets
       </button>
     </div>
   );

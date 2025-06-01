@@ -15,10 +15,12 @@ import {
 import { checkTransactionStatus, createHeartbeatTransaction } from "./transactions";
 import { convertPublicKeyToVaultId } from "./utils";
 import { fetchProofOfLifeData } from "./api";
+import { connectWallet as apiConnectWallet } from "../../api/userApi";
 import type {
   LastSubmissionData,
   ProofOfLifeData,
   TransactionStatusResponse,
+  UserState,
   WalletContextType,
 } from "./types";
 
@@ -50,6 +52,16 @@ const WalletContextCustom = createContext<WalletContextType>({
   },
   walletConnected: false,
   publicKey: null,
+  userState: {
+    isRegistered: false,
+    isRegistrationModalOpen: false,
+    userData: null,
+    isLoading: false,
+    error: null,
+  },
+  registerUser: async () => false,
+  openRegistrationModal: () => {},
+  closeRegistrationModal: () => {},
 });
 
 // Hook pour accéder aux fonctionnalités du contexte personnalisé
@@ -78,6 +90,15 @@ export function WalletContextCustomProvider({
       timestamp: null,
       status: null,
     });
+  
+  // User registration state
+  const [userState, setUserState] = useState<UserState>({
+    isRegistered: false,
+    isRegistrationModalOpen: false,
+    userData: null,
+    isLoading: false,
+    error: null,
+  });
 
   // Mettre à jour le vaultId et récupérer les données réelles quand la clé publique change
   useEffect(() => {
@@ -92,8 +113,70 @@ export function WalletContextCustomProvider({
       
       // Récupérer les données réelles depuis l'API
       refreshProofOfLifeData(vaultId);
+
+      // Check if user is registered when wallet is connected
+      checkUserRegistration(publicKey);
     }
   }, [publicKey]);
+  
+  // Check if user is already registered in the database
+  const checkUserRegistration = useCallback(async (walletAddress: string) => {
+    if (!walletAddress) return;
+    
+    try {
+      setUserState(prev => ({
+        ...prev,
+        isLoading: true,
+        error: null
+      }));
+      
+      const response = await apiConnectWallet({ walletAddress });
+      
+      if (response && response.user) {
+        // Use the profileComplete flag from the backend
+        const isProfileComplete = response.profileComplete === true;
+        
+        if (!isProfileComplete) {
+          // User exists but needs to complete profile information
+          setUserState({
+            isRegistered: false, // Not fully registered
+            isRegistrationModalOpen: true, // Show modal to complete registration
+            userData: response.user, // Keep user data for reference
+            isLoading: false,
+            error: null
+          });
+          console.log('Profile incomplete, showing registration modal');
+        } else {
+          // User exists with complete profile
+          setUserState({
+            isRegistered: true,
+            isRegistrationModalOpen: false,
+            userData: response.user,
+            isLoading: false,
+            error: null
+          });
+          console.log('Profile complete, user fully registered');
+        }
+      } else {
+        // User doesn't exist, show registration modal
+        setUserState({
+          isRegistered: false,
+          isRegistrationModalOpen: true,
+          userData: null,
+          isLoading: false,
+          error: null
+        });
+        console.log('User does not exist, showing registration modal');
+      }
+    } catch (error) {
+      console.error('Error checking user registration:', error);
+      setUserState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Failed to check user registration'
+      }));
+    }
+  }, []);
   
   // Fonction pour récupérer les données réelles depuis l'API
   const refreshProofOfLifeData = useCallback(async (vaultId: string) => {
@@ -323,6 +406,59 @@ export function WalletContextCustomProvider({
     checkTxStatus,
   ]);
 
+  // User registration handlers
+  const registerUser = useCallback(async (firstName: string, lastName: string) => {
+    if (!publicKey) return false;
+    
+    try {
+      setUserState(prev => ({
+        ...prev,
+        isLoading: true,
+        error: null
+      }));
+      
+      const response = await apiConnectWallet({
+        walletAddress: publicKey,
+        firstName,
+        lastName
+      });
+      
+      if (response && response.user) {
+        setUserState({
+          isRegistered: true,
+          isRegistrationModalOpen: false,
+          userData: response.user,
+          isLoading: false,
+          error: null
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error registering user:', error);
+      setUserState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Failed to register user'
+      }));
+      return false;
+    }
+  }, [publicKey]);
+  
+  const openRegistrationModal = useCallback(() => {
+    setUserState(prev => ({
+      ...prev,
+      isRegistrationModalOpen: true
+    }));
+  }, []);
+  
+  const closeRegistrationModal = useCallback(() => {
+    setUserState(prev => ({
+      ...prev,
+      isRegistrationModalOpen: false
+    }));
+  }, []);
+
   // Valeurs exposées par le contexte
   const contextValue = useMemo(
     () => ({
@@ -335,6 +471,10 @@ export function WalletContextCustomProvider({
       lastSubmissionData,
       walletConnected: connected,
       publicKey,
+      userState,
+      registerUser,
+      openRegistrationModal,
+      closeRegistrationModal
     }),
     [
       submitHeartbeat,
@@ -346,6 +486,10 @@ export function WalletContextCustomProvider({
       lastSubmissionData,
       connected,
       publicKey,
+      userState,
+      registerUser,
+      openRegistrationModal,
+      closeRegistrationModal
     ]
   );
 

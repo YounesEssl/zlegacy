@@ -1,52 +1,56 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useWallet } from '@demox-labs/aleo-wallet-adapter-react';
-import { WalletMultiButton } from '@demox-labs/aleo-wallet-adapter-reactui';
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
+import { WalletMultiButton } from "@demox-labs/aleo-wallet-adapter-reactui";
+import { useWalletCustom } from "../contexts/wallet";
 import {
   WalletIcon,
   ChevronDownIcon,
   ArrowRightOnRectangleIcon,
   CheckCircleIcon,
   ExclamationCircleIcon,
-} from '@heroicons/react/24/outline';
-import { Tooltip } from 'react-tooltip';
+} from "@heroicons/react/24/outline";
+import { Tooltip } from "react-tooltip";
 
-// Custom styles for the wallet button
 const walletButtonClass = `
   hidden absolute opacity-0 
   wallet-adapter-button-trigger
 `;
 
-// Component to format Aleo addresses
 const FormatAddress = ({ address }: { address: string | null }) => {
   if (!address) return null;
-  
+
   const formatted = `${address.substring(0, 6)}...${address.substring(
     address.length - 4
   )}`;
-  
+
   return (
-    <span className="font-mono" data-tooltip-id="full-address-tooltip" data-tooltip-content={address}>
+    <span
+      className="font-mono"
+      data-tooltip-id="full-address-tooltip"
+      data-tooltip-content={address}
+    >
       {formatted}
     </span>
   );
 };
 
 const CustomWalletButton: React.FC = () => {
-  const { 
-    wallet, 
-    connected, 
-    connecting, 
-    disconnecting, 
+  const {
+    wallet,
+    connected,
+    connecting,
+    disconnecting,
     publicKey,
-    disconnect
+    disconnect,
   } = useWallet();
-  
+
+  const { userState } = useWalletCustom();
+
   const [showDropdown, setShowDropdown] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showConfirmDisconnect, setShowConfirmDisconnect] = useState(false);
 
-  // Effect to hide copy message after a delay
   useEffect(() => {
     if (copied) {
       const timer = setTimeout(() => setCopied(false), 2000);
@@ -54,21 +58,19 @@ const CustomWalletButton: React.FC = () => {
     }
   }, [copied]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (!target.closest('.wallet-dropdown-container')) {
+      if (!target.closest(".wallet-dropdown-container")) {
         setShowDropdown(false);
         setShowConfirmDisconnect(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Copy address to clipboard
   const copyAddress = () => {
     if (publicKey) {
       navigator.clipboard.writeText(publicKey);
@@ -76,7 +78,6 @@ const CustomWalletButton: React.FC = () => {
     }
   };
 
-  // Handle disconnect with confirmation
   const handleDisconnect = () => {
     if (showConfirmDisconnect) {
       disconnect();
@@ -87,26 +88,22 @@ const CustomWalletButton: React.FC = () => {
     }
   };
 
-  // Determine wallet name
   const getWalletName = () => {
-    if (!wallet) return 'Wallet';
-    
+    if (!wallet) return "Wallet";
+
     return wallet.adapter.name;
   };
 
-  // Get wallet icon
   const getWalletIcon = () => {
-    // Here we could add specific icons based on the wallet type
     return <WalletIcon className="w-4 h-4" />;
   };
 
-  // If not connected, display connect button
   if (!connected) {
     return (
       <div className="relative inline-block">
         {/* Hidden original button to handle connection */}
         <WalletMultiButton className={walletButtonClass} />
-        
+
         {/* Our custom button that will trigger click on the original button */}
         <motion.button
           whileHover={{ scale: 1.05 }}
@@ -118,13 +115,13 @@ const CustomWalletButton: React.FC = () => {
             text-white font-medium py-2 px-4 rounded-lg 
             shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30
             transition-all duration-300
-            ${connecting || disconnecting ? 'opacity-70 cursor-wait' : ''}
+            ${connecting || disconnecting ? "opacity-70 cursor-wait" : ""}
           `}
           onClick={() => {
             // Trigger click on the original button
-            document.querySelector('.wallet-adapter-button-trigger')?.dispatchEvent(
-              new MouseEvent('click', { bubbles: true })
-            );
+            document
+              .querySelector(".wallet-adapter-button-trigger")
+              ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
           }}
           disabled={connecting || disconnecting}
         >
@@ -144,10 +141,8 @@ const CustomWalletButton: React.FC = () => {
     );
   }
 
-  // Si connecté, afficher l'adresse et le dropdown
   return (
     <div className="relative inline-block wallet-dropdown-container">
-      {/* Le bouton qui affiche l'adresse */}
       <motion.button
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
@@ -164,13 +159,19 @@ const CustomWalletButton: React.FC = () => {
       >
         {getWalletIcon()}
         <FormatAddress address={publicKey} />
-        <ChevronDownIcon className={`w-4 h-4 transition-transform duration-200 ${showDropdown ? 'rotate-180' : ''}`} />
+        <ChevronDownIcon
+          className={`w-4 h-4 transition-transform duration-200 ${
+            showDropdown ? "rotate-180" : ""
+          }`}
+        />
       </motion.button>
 
-      {/* Tooltip pour afficher l'adresse complète */}
-      <Tooltip id="full-address-tooltip" place="bottom" className="z-50 max-w-xs break-all" />
+      <Tooltip
+        id="full-address-tooltip"
+        place="bottom"
+        className="z-50 max-w-xs break-all"
+      />
 
-      {/* Dropdown menu */}
       <AnimatePresence>
         {showDropdown && (
           <motion.div
@@ -181,29 +182,74 @@ const CustomWalletButton: React.FC = () => {
             className="absolute right-0 mt-2 w-72 rounded-xl shadow-2xl z-50 overflow-hidden"
             style={{
               backgroundColor: "var(--bg-primary)",
-              border: "1px solid var(--border-color)"
+              border: "1px solid var(--border-color)",
             }}
           >
-            {/* Header with wallet name */}
-            <div className="p-3 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border-color)" }}>
+            <div
+              className="p-3 flex items-center justify-between"
+              style={{ borderBottom: "1px solid var(--border-color)" }}
+            >
               <div className="flex items-center gap-2">
                 {getWalletIcon()}
-                <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{getWalletName()}</span>
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {getWalletName()}
+                </span>
               </div>
-              <div className="px-2 py-0.5 rounded-full" style={{
-                backgroundColor: "var(--accent-primary-transparent)",
-                border: "1px solid var(--accent-primary-muted)"
-              }}>
-                <span className="text-xs" style={{ color: "var(--accent-primary)" }}>Testnet</span>
+              <div
+                className="px-2 py-0.5 rounded-full"
+                style={{
+                  backgroundColor: "var(--accent-primary-transparent)",
+                  border: "1px solid var(--accent-primary-muted)",
+                }}
+              >
+                <span
+                  className="text-xs"
+                  style={{ color: "var(--accent-primary)" }}
+                >
+                  Testnet
+                </span>
               </div>
             </div>
-            
-            {/* Address with copy option */}
-            <div className="p-3" style={{ borderBottom: "1px solid var(--border-color)" }}>
-              <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Address</div>
+
+            {userState.userData && (
+              <div
+                className="p-3"
+                style={{ borderBottom: "1px solid var(--border-color)" }}
+              >
+                <div
+                  className="text-xs mb-1"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  User
+                </div>
+                <div
+                  className="text-sm font-medium"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {userState.userData.firstName} {userState.userData.lastName}
+                </div>
+              </div>
+            )}
+
+            <div
+              className="p-3"
+              style={{ borderBottom: "1px solid var(--border-color)" }}
+            >
+              <div
+                className="text-xs mb-1"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Address
+              </div>
               <div className="flex items-center justify-between">
-                <div className="text-sm font-mono truncate max-w-[200px]" style={{ color: "var(--text-secondary)" }}>
-                  {publicKey || 'Not connected'}
+                <div
+                  className="text-sm font-mono truncate max-w-[200px]"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  {publicKey || "Not connected"}
                 </div>
                 <motion.button
                   whileHover={{ scale: 1.1 }}
@@ -211,7 +257,7 @@ const CustomWalletButton: React.FC = () => {
                   className="text-xs px-2 py-1 rounded transition-colors"
                   style={{
                     backgroundColor: "var(--bg-tertiary)",
-                    color: "var(--text-secondary)"
+                    color: "var(--text-secondary)",
                   }}
                   onClick={copyAddress}
                 >
@@ -221,23 +267,22 @@ const CustomWalletButton: React.FC = () => {
                       Copied
                     </span>
                   ) : (
-                    'Copy'
+                    "Copy"
                   )}
                 </motion.button>
               </div>
             </div>
 
-            {/* Wallet actions */}
             <div className="p-3">
-              <button 
+              <button
                 className="w-full py-2 text-sm rounded-lg flex items-center justify-center gap-2 transition-colors"
                 style={{
-                  backgroundColor: showConfirmDisconnect 
-                    ? "var(--accent-error-transparent)" 
+                  backgroundColor: showConfirmDisconnect
+                    ? "var(--accent-error-transparent)"
                     : "var(--accent-primary-transparent)",
                   color: showConfirmDisconnect
-                    ? "var(--accent-error)" 
-                    : "var(--accent-primary)"
+                    ? "var(--accent-error)"
+                    : "var(--accent-primary)",
                 }}
                 onClick={handleDisconnect}
               >

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 interface CoinPrice {
   [key: string]: {
@@ -6,11 +6,6 @@ interface CoinPrice {
   };
 }
 
-/**
- * Hook personnalisé pour récupérer les prix des crypto-monnaies depuis CoinGecko
- * @param coinIds Les identifiants des crypto-monnaies sur CoinGecko (ex: 'bitcoin', 'ethereum', 'aleo')
- * @returns Un objet contenant les prix en USD et l'état de chargement
- */
 export const useCryptoPrice = (coinIds: string[]) => {
   const [prices, setPrices] = useState<CoinPrice | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -25,7 +20,7 @@ export const useCryptoPrice = (coinIds: string[]) => {
 
       try {
         setLoading(true);
-        const idsParam = coinIds.join(',');
+        const idsParam = coinIds.join(",");
         const response = await fetch(
           `https://api.coingecko.com/api/v3/simple/price?ids=${idsParam}&vs_currencies=usd`
         );
@@ -38,12 +33,13 @@ export const useCryptoPrice = (coinIds: string[]) => {
         setPrices(data);
         setError(null);
       } catch (err) {
-        console.error('Error fetching crypto prices:', err);
-        setError(err instanceof Error ? err : new Error('Unknown error occurred'));
-        
-        // Valeurs par défaut en cas d'erreur
+        console.error("Error fetching crypto prices:", err);
+        setError(
+          err instanceof Error ? err : new Error("Unknown error occurred")
+        );
+
         const defaultPrices: CoinPrice = {};
-        coinIds.forEach(id => {
+        coinIds.forEach((id) => {
           defaultPrices[id] = { usd: getDefaultPrice(id) };
         });
         setPrices(defaultPrices);
@@ -54,22 +50,20 @@ export const useCryptoPrice = (coinIds: string[]) => {
 
     fetchPrices();
 
-    // Actualiser les prix toutes les 5 minutes
     const intervalId = setInterval(fetchPrices, 5 * 60 * 1000);
 
     return () => clearInterval(intervalId);
-  }, [coinIds.join(',')]);
+  }, [coinIds.join(",")]);
 
-  // Fonction pour obtenir un prix par défaut en cas d'erreur
   const getDefaultPrice = (coinId: string): number => {
     const defaultPrices: Record<string, number> = {
-      'bitcoin': 63000,
-      'ethereum': 3400,
-      'aleo': 10.5,
-      'tether': 1,
-      'usd-coin': 1,
-      'binancecoin': 580,
-      'solana': 150,
+      bitcoin: 63000,
+      ethereum: 3400,
+      aleo: 10.5,
+      tether: 1,
+      "usd-coin": 1,
+      binancecoin: 580,
+      solana: 150,
     };
 
     return defaultPrices[coinId] || 1;
@@ -78,26 +72,26 @@ export const useCryptoPrice = (coinIds: string[]) => {
   return { prices, loading, error };
 };
 
-// Mapping entre les symboles de crypto et les identifiants CoinGecko
 export const cryptoIdMap: Record<string, string> = {
-  'BTC': 'bitcoin',
-  'ETH': 'ethereum',
-  'ALEO': 'aleo',
-  'USDT': 'tether',
-  'USDC': 'usd-coin',
-  'BNB': 'binancecoin',
-  'SOL': 'solana',
+  BTC: "bitcoin",
+  ETH: "ethereum",
+  ALEO: "aleo",
+  USDT: "tether",
+  USDC: "usd-coin",
+  BNB: "binancecoin",
+  SOL: "solana",
 };
 
-// Fonction utilitaire pour convertir un symbole en id CoinGecko
 export const symbolToId = (symbol: string): string => {
   return cryptoIdMap[symbol] || symbol.toLowerCase();
 };
 
-// Fonction utilitaire pour obtenir le prix d'une crypto par son symbole
-export const getPriceBySymbol = (prices: CoinPrice | null, symbol: string): number => {
+export const getPriceBySymbol = (
+  prices: CoinPrice | null,
+  symbol: string
+): number => {
   if (!prices) return 0;
-  
+
   const id = symbolToId(symbol);
   return prices[id]?.usd || 0;
 };

@@ -18,7 +18,7 @@ interface CompleteStepProps {
 }
 
 /**
- * Composant affiché lorsque la création du testament est terminée
+ * Component displayed when will creation is complete
  */
 const CompleteStep: React.FC<CompleteStepProps> = ({
   beneficiaryAllocations,
@@ -41,7 +41,19 @@ const CompleteStep: React.FC<CompleteStepProps> = ({
   
   // Get status info based on transaction status
   const getStatusDetails = () => {
-    const { status, confirmations } = transactionData;
+    // Handle null transactionData by providing default values
+    if (!transactionData) {
+      return {
+        bgColor: "rgba(34, 197, 94, 0.1)",
+        textColor: "var(--accent-success)",
+        icon: <CheckIcon className="h-8 w-8" style={{ color: "var(--accent-success)" }} />,
+        title: "Will Created Successfully",
+        description: "Your will has been created successfully.",
+        statusText: "Completed"
+      };
+    }
+    
+    const { status, confirmations = 0 } = transactionData;
     
     switch (status) {
       case 'confirmed':
@@ -286,7 +298,13 @@ const CompleteStep: React.FC<CompleteStepProps> = ({
         </div>
         
         {/* Progress bar */}
-        <div className="mb-4">
+        <motion.div
+          className="mb-4"
+          variants={cardVariants}
+          initial="initial"
+          animate="animate"
+          transition={{ delay: 0.6 }}
+        >
           <div className="flex justify-between items-center mb-1">
             <span 
               className="text-xs font-medium"
@@ -298,7 +316,7 @@ const CompleteStep: React.FC<CompleteStepProps> = ({
               className="text-xs font-medium"
               style={{ color: "var(--text-secondary)" }}
             >
-              {transactionData.progress}%
+              {transactionData ? (transactionData.progress || 0) : 100}%
             </span>
           </div>
           <div 
@@ -308,12 +326,12 @@ const CompleteStep: React.FC<CompleteStepProps> = ({
             <div 
               className="h-full rounded-full transition-all duration-500" 
               style={{ 
-                width: `${transactionData.progress}%`,
+                width: `${transactionData ? (transactionData.progress || 0) : 100}%`,
                 backgroundColor: statusDetails.textColor 
               }}
             ></div>
           </div>
-        </div>
+        </motion.div>
         
         {/* Creation date */}
         <div className="text-center mt-6">
@@ -327,99 +345,166 @@ const CompleteStep: React.FC<CompleteStepProps> = ({
       </motion.div>
 
       {/* Transaction Details Card */}
-      <motion.div
-        className="rounded-lg border shadow-sm overflow-hidden"
-        style={{ borderColor: "var(--border-color)", backgroundColor: "var(--bg-card)" }}
-        variants={cardVariants}
-        initial="initial"
-        animate="animate"
-        transition={{ delay: 0.3 }}
-      >
-        <div 
-          className="p-3 border-b" 
-          style={{ borderColor: "var(--border-color)" }}
+      {transactionData ? (
+        <motion.div
+          className="rounded-lg border shadow-sm overflow-hidden"
+          style={{ borderColor: "var(--border-color)", backgroundColor: "var(--bg-card)" }}
+          variants={cardVariants}
+          initial="initial"
+          animate="animate"
+          transition={{ delay: 0.3 }}
         >
-          <h4
-            className="text-sm font-medium"
-            style={{ color: "var(--text-primary)" }}
+          <div 
+            className="p-3 border-b" 
+            style={{ borderColor: "var(--border-color)" }}
           >
-            Transaction Details
-          </h4>
-        </div>
-        
-        <div className="p-4 space-y-3">
-          <div className="flex justify-between items-center">
-            <span
-              className="text-xs font-medium"
-              style={{ color: "var(--text-muted)" }}
+            <h4
+              className="text-sm font-medium"
+              style={{ color: "var(--text-primary)" }}
             >
-              Transaction ID:
-            </span>
-            <a
-              href={`https://explorer.aleo.org/transaction/${transactionData.transactionId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center text-xs font-mono hover:underline"
-              style={{ color: "var(--accent-primary)" }}
-            >
-              {transactionData.transactionId.substring(0, 10)}...{transactionData.transactionId.substring(transactionData.transactionId.length - 6)}
-              <ArrowTopRightOnSquareIcon className="h-3 w-3 ml-1" />
-            </a>
+              Transaction Details
+            </h4>
           </div>
           
-          <div className="flex justify-between items-center">
-            <span
-              className="text-xs font-medium"
-              style={{ color: "var(--text-muted)" }}
-            >
-              Block Hash:
-            </span>
-            <a
-              href={`https://explorer.aleo.org/block/${transactionData.blockHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center text-xs font-mono hover:underline"
-              style={{ color: "var(--accent-primary)" }}
-            >
-              {transactionData.blockHash.substring(0, 10)}...{transactionData.blockHash.substring(transactionData.blockHash.length - 6)}
-              <ArrowTopRightOnSquareIcon className="h-3 w-3 ml-1" />
-            </a>
+          <div className="p-4 space-y-3">
+            <div className="flex justify-between items-center">
+              <span
+                className="text-xs font-medium"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Transaction ID:
+              </span>
+              <a
+                href={`https://explorer.aleo.org/transaction/${transactionData?.transactionId || 'mock-transaction-id'}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center text-xs font-mono hover:underline"
+                style={{ color: "var(--accent-primary)" }}
+              >
+                {transactionData?.transactionId ? `${transactionData.transactionId.substring(0, 10)}...${transactionData.transactionId.substring(transactionData.transactionId.length - 6)}` : 'mock-transaction-id'}
+                <ArrowTopRightOnSquareIcon className="h-3 w-3 ml-1" />
+              </a>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <span
+                className="text-xs font-medium"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Block Hash:
+              </span>
+              <a
+                href={`https://explorer.aleo.org/block/${transactionData?.blockHash || 'mock-block-hash'}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center text-xs font-mono hover:underline"
+                style={{ color: "var(--accent-primary)" }}
+              >
+                {transactionData?.blockHash ? `${transactionData.blockHash.substring(0, 10)}...${transactionData.blockHash.substring(transactionData.blockHash.length - 6)}` : 'mock-block-hash'}
+                <ArrowTopRightOnSquareIcon className="h-3 w-3 ml-1" />
+              </a>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <span
+                className="text-xs font-medium"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Status:
+              </span>
+              <span
+                className="text-xs font-medium px-2 py-1 rounded"
+                style={{ 
+                  backgroundColor: statusDetails.bgColor,
+                  color: statusDetails.textColor
+                }}
+              >
+                {statusDetails.statusText}
+              </span>
+            </div>
           </div>
           
-          <div className="flex justify-between items-center">
-            <span
-              className="text-xs font-medium"
-              style={{ color: "var(--text-muted)" }}
+          <div className="p-3 border-t bg-gradient-to-r from-transparent via-slate-50 to-transparent dark:via-slate-800">
+            <a
+              href={`https://explorer.aleo.org/transaction/${transactionData?.transactionId || 'mock-transaction-id'}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center text-sm font-medium transition-colors"
+              style={{ color: "var(--accent-primary)" }}
             >
-              Status:
-            </span>
-            <span
-              className="text-xs font-medium px-2 py-1 rounded"
-              style={{ 
-                backgroundColor: statusDetails.bgColor,
-                color: statusDetails.textColor
-              }}
-            >
-              {statusDetails.statusText}
-            </span>
+              View Full Details on Explorer
+              <ArrowTopRightOnSquareIcon className="h-4 w-4 ml-1" />
+            </a>
           </div>
-        </div>
-        
-        <div className="p-3 border-t bg-gradient-to-r from-transparent via-slate-50 to-transparent dark:via-slate-800">
-          <a
-            href={`https://explorer.aleo.org/transaction/${transactionData.transactionId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center text-sm font-medium transition-colors"
-            style={{ color: "var(--accent-primary)" }}
+        </motion.div>
+      ) : (
+        <motion.div
+          className="rounded-lg border shadow-sm overflow-hidden"
+          style={{ borderColor: "var(--border-color)", backgroundColor: "var(--bg-card)" }}
+          variants={cardVariants}
+          initial="initial"
+          animate="animate"
+          transition={{ delay: 0.3 }}
+        >
+          <div 
+            className="p-3 border-b" 
+            style={{ borderColor: "var(--border-color)" }}
           >
-            View Full Details on Explorer
-            <ArrowTopRightOnSquareIcon className="h-4 w-4 ml-1" />
-          </a>
-        </div>
-      </motion.div>
+            <h4
+              className="text-sm font-medium"
+              style={{ color: "var(--text-primary)" }}
+            >
+              Will Summary
+            </h4>
+          </div>
+          
+          <div className="p-4 space-y-3">
+            <div className="flex justify-between items-center">
+              <span
+                className="text-xs font-medium"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Created On:
+              </span>
+              <span className="text-xs">
+                {formatDate()}
+              </span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <span
+                className="text-xs font-medium"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Privacy Mode:
+              </span>
+              <span className="text-xs capitalize">
+                {transactionMode}
+              </span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <span
+                className="text-xs font-medium"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Status:
+              </span>
+              <span
+                className="text-xs font-medium px-2 py-1 rounded"
+                style={{ 
+                  backgroundColor: statusDetails.bgColor,
+                  color: statusDetails.textColor
+                }}
+              >
+                {statusDetails.statusText}
+              </span>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
-      {/* Placeholder pour d'autres informations si nécessaire */}
+      {/* Placeholder for additional information if needed */}
 
       {/* Action Button */}
       <motion.div 

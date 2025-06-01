@@ -3,10 +3,10 @@ import { motion } from 'framer-motion';
 import { Save, X } from 'lucide-react';
 import { FieldGroup } from './FieldGroup';
 import { ToggleReveal } from './ToggleReveal';
-import type { Credential } from '../hooks/useCredentials';
+import type { Credential, NewCredentialFormData } from '../types';
 
 interface CredentialsFormProps {
-  onSubmit: (data: Omit<Credential, 'id' | 'lastUpdated'>) => Promise<boolean>;
+  onSubmit: (data: NewCredentialFormData) => Promise<boolean>;
   onCancel: () => void;
   initialData?: Partial<Credential>;
   isEdit?: boolean;
@@ -19,11 +19,12 @@ export const CredentialsForm: React.FC<CredentialsFormProps> = ({
   isEdit = false,
 }) => {
   const [formData, setFormData] = useState<Partial<Credential>>({
-    title: '',
+    name: '',
     username: '',
     password: '',
-    website: '',
+    url: '',
     notes: '',
+    type: 'standard',
     ...initialData,
   });
   
@@ -43,8 +44,8 @@ export const CredentialsForm: React.FC<CredentialsFormProps> = ({
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
     
-    if (!formData.title?.trim()) {
-      newErrors.title = 'Title is required';
+    if (!formData.name?.trim()) {
+      newErrors.name = 'Name is required';
     }
     
     if (!formData.username?.trim()) {
@@ -71,13 +72,14 @@ export const CredentialsForm: React.FC<CredentialsFormProps> = ({
     setIsSubmitting(true);
     
     try {
+      console.log('Soumission du credential avec le type:', formData.type);
       const success = await onSubmit({
-        title: formData.title!,
+        name: formData.name!,
         username: formData.username!,
         password: formData.password!,
-        website: formData.website,
+        url: formData.url,
         notes: formData.notes,
-        type: 'seedphrase'
+        type: formData.type || 'standard' 
       });
       
       if (success) {
@@ -119,23 +121,24 @@ export const CredentialsForm: React.FC<CredentialsFormProps> = ({
       </div>
       
       <FieldGroup
-        label="Title"
-        htmlFor="title"
-        error={errors.title}
+        label="Name"
+        htmlFor="name"
+        error={errors.name}
         required
       >
-        <input
-          id="title"
-          name="title"
-          value={formData.title || ''}
-          onChange={handleChange}
-          className="w-full p-2.5 rounded-md outline-none"
+        <input 
+          type="text" 
+          id="name" 
+          name="name" 
+          value={formData.name || ''} 
+          onChange={handleChange} 
+          className="w-full p-2.5 rounded-md" 
           style={{ 
-            backgroundColor: 'var(--bg-tertiary)',
-            border: errors.title ? '1px solid var(--error)' : '1px solid var(--border-color)', 
+            backgroundColor: 'var(--bg-primary)', 
+            border: errors.name ? '1px solid var(--error)' : '1px solid var(--border-color)', 
             color: 'var(--text-primary)'
           }}
-          placeholder="e.g. Gmail, Netflix, Bank"
+          disabled={isSubmitting}
         />
       </FieldGroup>
       
@@ -191,22 +194,22 @@ export const CredentialsForm: React.FC<CredentialsFormProps> = ({
       </FieldGroup>
       
       <FieldGroup
-        label="Website"
-        htmlFor="website"
-        error={errors.website}
+        label="Website URL"
+        htmlFor="url"
+        error={errors.url}
       >
         <input
-          id="website"
-          name="website"
-          value={formData.website || ''}
+          id="url"
+          name="url"
+          value={formData.url || ''}
           onChange={handleChange}
           className="w-full p-2.5 rounded-md outline-none"
           style={{ 
             backgroundColor: 'var(--bg-tertiary)',
-            border: errors.website ? '1px solid var(--error)' : '1px solid var(--border-color)', 
+            border: errors.url ? '1px solid var(--error)' : '1px solid var(--border-color)', 
             color: 'var(--text-primary)'
           }}
-          placeholder="https://example.com"
+          placeholder="e.g. https://gmail.com"
         />
       </FieldGroup>
       

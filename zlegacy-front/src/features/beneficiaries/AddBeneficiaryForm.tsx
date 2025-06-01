@@ -3,21 +3,7 @@ import { motion } from "framer-motion";
 import { XMarkIcon, CheckIcon } from "@heroicons/react/24/outline";
 import Button from "../../components/ui/Button";
 import BeneficiaryInput from "../wills-form/BeneficiaryInput";
-import type { NewBeneficiaryFormData, BeneficiaryRelation } from "./types";
-
-// Définition des couleurs et libellés pour chaque relation
-const relationOptions: {
-  value: BeneficiaryRelation;
-  label: string;
-  color: string;
-}[] = [
-  { value: "family", label: "Family", color: "#4F46E5" }, // Indigo
-  { value: "spouse", label: "Spouse", color: "#EC4899" }, // Pink
-  { value: "child", label: "Child", color: "#10B981" },  // Emerald
-  { value: "friend", label: "Friend", color: "#F59E0B" }, // Amber
-  { value: "business", label: "Business", color: "#0EA5E9" }, // Sky
-  { value: "other", label: "Other", color: "#6B7280" }, // Gray
-];
+import type { NewBeneficiaryFormData } from "./types";
 
 interface AddBeneficiaryFormProps {
   formData: NewBeneficiaryFormData;
@@ -177,48 +163,7 @@ const AddBeneficiaryForm: React.FC<AddBeneficiaryFormProps> = ({
             </div>
           </div>
 
-          {/* Relation */}
-          <div>
-            <label
-              className="block text-sm font-medium mb-1"
-              style={{ color: "var(--text-secondary)" }}
-            >
-              Relationship
-            </label>
-            <div className="grid grid-cols-3 gap-2.5">
-              {relationOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={`px-3 py-2 rounded-lg border flex items-center justify-center text-sm transition-colors ${
-                    formData.relation === option.value
-                      ? "border-transparent"
-                      : "border-gray-700 hover:border-gray-600"
-                  }`}
-                  style={{
-                    backgroundColor:
-                      formData.relation === option.value
-                        ? `${option.color}20` // Couleur avec 20% d'opacité
-                        : "var(--bg-tertiary)",
-                    color:
-                      formData.relation === option.value
-                        ? option.color
-                        : "var(--text-secondary)",
-                    borderColor:
-                      formData.relation === option.value
-                        ? option.color
-                        : "var(--border-color)",
-                  }}
-                  onClick={() => onChange("relation", option.value)}
-                >
-                  {formData.relation === option.value && (
-                    <CheckIcon className="w-3.5 h-3.5 mr-1" />
-                  )}
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* La partie relationship a été retirée */}
 
           {/* Notes */}
           <div>

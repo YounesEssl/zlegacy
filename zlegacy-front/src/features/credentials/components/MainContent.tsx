@@ -1,11 +1,9 @@
-import React, { useState } from "react";
+import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CredentialsForm } from "./CredentialsForm";
-import { SeedphraseForm } from "./SeedphraseForm";
-import { CredentialTypeSelector } from "./CredentialTypeSelector";
 import { CredentialsTabView } from "./CredentialsTabView";
 import { EmptyCredentials } from "./EmptyCredentials";
-import type { Credential, CredentialType } from "../hooks/useCredentials";
+import type { Credential, NewCredentialFormData } from "../types";
 
 interface MainContentProps {
   showAddForm: boolean;
@@ -16,12 +14,13 @@ interface MainContentProps {
   error: string | null;
   searchTerm: string;
   editingCredential: Credential | null;
-  onSubmit: (data: Omit<Credential, "id" | "lastUpdated">) => Promise<boolean>;
+  onSubmit: (data: NewCredentialFormData) => Promise<boolean>;
   onCancelForm: () => void;
   onAddNew: () => void;
   onEdit: (credential: Credential) => void;
   onDelete: (id: string) => void;
   onImport: (data: any[]) => Promise<boolean>;
+  onSearch?: (term: string) => void;
 }
 
 export const MainContent: React.FC<MainContentProps> = ({
@@ -40,52 +39,19 @@ export const MainContent: React.FC<MainContentProps> = ({
   onDelete,
   onImport,
 }) => {
-  // State to track the selected credential type
-  // Make sure to update this when editingCredential changes
-  const [selectedType, setSelectedType] = useState<CredentialType>(
-    editingCredential?.type || 'standard'
-  );
-  
-  // Update selectedType when editingCredential changes
-  React.useEffect(() => {
-    if (editingCredential) {
-      setSelectedType(editingCredential.type);
-    }
-  }, [editingCredential]);
+  // Plus besoin de gérer le type de credential puisque tous sont de type standard
 
   return (
     <AnimatePresence mode="wait">
-      {/* Debugging info */}
       {showAddForm === true ? (
         /* Add or edit form */
-        <>
-          {/* Type selector only when adding (not in edit mode) */}
-          {!editingCredential && (
-            <CredentialTypeSelector
-              selectedType={selectedType}
-              onSelectType={setSelectedType}
-            />
-          )}
-
-          {/* Display the appropriate form based on the type */}
-          {(editingCredential?.type === 'seedphrase' || (!editingCredential && selectedType === 'seedphrase')) ? (
-            <SeedphraseForm
-              key="seedphrase-form"
-              onSubmit={onSubmit}
-              onCancel={onCancelForm}
-              initialData={editingCredential || undefined}
-              isEdit={!!editingCredential}
-            />
-          ) : (
-            <CredentialsForm
-              key="standard-form"
-              onSubmit={onSubmit}
-              onCancel={onCancelForm}
-              initialData={editingCredential || undefined}
-              isEdit={!!editingCredential}
-            />
-          )}
-        </>
+        <CredentialsForm
+          key="standard-form"
+          onSubmit={onSubmit}
+          onCancel={onCancelForm}
+          initialData={editingCredential || undefined}
+          isEdit={!!editingCredential}
+        />
       ) : (
         /* Main content (list or empty state) */
         <motion.div

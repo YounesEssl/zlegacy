@@ -20,7 +20,5 @@ export interface NewBeneficiaryFormData {
   email: string;
   phone: string;
   notes: string;
-  relation: BeneficiaryRelation;
-  relationColor?: string;
   isAddressValid: boolean;
 }

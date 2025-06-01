@@ -5,16 +5,16 @@ import MultiBeneficiarySelector from "./MultiBeneficiarySelector";
 import AssetAllocationStep from "./components/AssetAllocationStep";
 import CredentialsAllocationStep from "./components/CredentialsAllocationStep";
 
-// Composants nouvellement extraits
+// Newly extracted components
 import FormProgressBar from "./components/FormProgressBar";
 import NoWalletError from "./components/NoWalletError";
 import ReviewStep from "./components/ReviewStep";
 import CompleteStep from "./components/CompleteStep";
 import NoteStep from "./components/NoteStep";
 import ExecutorStep from "./components/ExecutorStep";
-// Suppression de l'import TransactionModeStep
+// Removed TransactionModeStep import
 
-// Hook personnalisé
+// Custom hook
 import { useWillForm } from "./hooks/useWillForm";
 
 import type { WillFormData } from "./types";
@@ -32,13 +32,13 @@ interface WillFormContentProps {
 }
 
 /**
- * Composant principal pour le contenu du formulaire de création de testament
+ * Main component for the will creation form content
  */
 const WillFormContent: React.FC<WillFormContentProps> = ({
   testatorAddress,
   willIdToEdit,
 }) => {
-  // Utilisation du hook personnalisé pour la logique du formulaire
+  // Using the custom hook for form logic
   const {
     steps,
     currentStep,
@@ -58,12 +58,12 @@ const WillFormContent: React.FC<WillFormContentProps> = ({
     originalWill,
   } = useWillForm(testatorAddress, willIdToEdit);
 
-  // Si l'utilisateur est connecté mais n'a pas d'adresse de testateur, afficher une erreur
+  // If the user is connected but doesn't have a testator address, display an error
   if (connected && !hasTestatorAddress) {
     return <NoWalletError />;
   }
 
-  // Rendu du contenu en fonction de l'étape actuelle
+  // Render content based on the current step
   const renderStepContent = () => {
     switch (currentStep) {
       case "beneficiaries":
@@ -91,12 +91,12 @@ const WillFormContent: React.FC<WillFormContentProps> = ({
         );
 
       case "note":
-        // On obtient la fonction setNote directement depuis le contexte
+        // Get the setNote function directly from the context
         const { setNote: updateNote } = useWill();
         return (
           <NoteStep
             note={note}
-            setNote={updateNote} // On passe directement la fonction du contexte
+            setNote={updateNote} // Pass the context function directly
             goToNextStep={goToNextStep}
             goToPreviousStep={goToPreviousStep}
           />
@@ -134,7 +134,7 @@ const WillFormContent: React.FC<WillFormContentProps> = ({
         );
 
       default:
-        // Rediriger vers l'étape des bénéficiaires en cas d'étape non reconnue
+        // Redirect to the beneficiaries step if the step is not recognized
         return (
           <MultiBeneficiarySelector
             onContinue={goToNextStep}
@@ -180,7 +180,7 @@ const WillFormContent: React.FC<WillFormContentProps> = ({
 };
 
 /**
- * Composant de création de testament qui enveloppe le contenu dans le provider
+ * Will creation component that wraps the content in the provider
  */
 const CreateWillForm: React.FC<CreateWillFormProps> = ({ testatorAddress, willIdToEdit }) => {
   return (
