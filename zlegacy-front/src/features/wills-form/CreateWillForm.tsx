@@ -12,6 +12,7 @@ import ReviewStep from "./components/ReviewStep";
 import CompleteStep from "./components/CompleteStep";
 import NoteStep from "./components/NoteStep";
 import ExecutorStep from "./components/ExecutorStep";
+import WalletsStep from "./components/WalletsStep";
 // Removed TransactionModeStep import
 
 // Custom hook
@@ -87,6 +88,14 @@ const WillFormContent: React.FC<WillFormContentProps> = ({
           <CredentialsAllocationStep
             onPrevious={goToPreviousStep}
             onContinue={goToNextStep}
+          />
+        );
+        
+      case "wallets":
+        return (
+          <WalletsStep
+            goToNextStep={goToNextStep}
+            goToPreviousStep={goToPreviousStep}
           />
         );
 

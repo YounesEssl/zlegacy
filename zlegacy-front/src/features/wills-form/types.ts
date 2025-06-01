@@ -26,6 +26,7 @@ export type FormStep =
   | "beneficiaries"
   | "assets"
   | "credentials"
+  | "wallets"
   | "note"
   | "executor"
   | "review"
@@ -77,9 +78,26 @@ export interface Executor {
   details?: string;
 }
 
+export interface Wallet {
+  id: string;
+  name: string;
+  type: string;
+  privateKey?: string;
+  publicAddress?: string;
+  additionalInfo?: string;
+  createdAt: string;
+  beneficiaryId?: string;
+}
+
+export interface WalletAllocation {
+  walletId: string;
+  beneficiaryId: string;
+}
+
 export interface WillFormData {
   beneficiaryAllocations: BeneficiaryAllocation[];
   credentialAllocations: CredentialAllocation[];
+  walletAllocations?: WalletAllocation[];
   testatorAddress: string;
   note: string;
   transactionMode: TransactionMode;

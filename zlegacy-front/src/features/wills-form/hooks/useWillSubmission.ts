@@ -39,6 +39,10 @@ export const useWillSubmission = ({ onSuccess, onError }: UseWillSubmissionProps
       case 'credentials':
         // For this step, we'll simply proceed to the next step
         return true;
+      
+      case 'wallets':
+        // For this step, we'll simply proceed to the next step
+        return true;
         
       case 'note':
         // No validation needed for the note
@@ -74,6 +78,9 @@ export const useWillSubmission = ({ onSuccess, onError }: UseWillSubmissionProps
         setCurrentStep('credentials');
         break;
       case 'credentials':
+        setCurrentStep('wallets');
+        break;
+      case 'wallets':
         setCurrentStep('note');
         break;
       case 'note':

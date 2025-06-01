@@ -1,19 +1,22 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import type {
+  FormStep,
   Beneficiary,
   BeneficiaryAllocation,
   TransactionMode,
-  FormStep,
-  CurrencyUnit,
   CryptoBalance,
-  CryptoAsset,
   AssetAllocation,
+  CurrencyUnit,
   Credential,
   CredentialAllocation,
   Executor,
+  Wallet,
+  WalletAllocation,
+  CryptoAsset,
 } from "./types";
 import { useCryptoPrice } from "../../hooks/useCryptoPrice";
+// Suppression de l'import fetchPublicBalance
 
 // Import Will type from wills feature
 import type { Will } from "../wills/types";
@@ -100,6 +103,9 @@ const demoWills: Will[] = [
 ];
 
 interface WillContextType {
+  // Beneficiaries
+  beneficiaries: Beneficiary[];
+  
   // Selected beneficiaries with allocations
   beneficiaryAllocations: BeneficiaryAllocation[];
   addBeneficiary: (beneficiary: Beneficiary) => void;
@@ -139,6 +145,14 @@ interface WillContextType {
 
   // Currency display preferences
   currencyUnit: CurrencyUnit;
+  
+  // Wallet balances
+  publicBalance: {
+    symbol: string;
+    balance: number;
+    usdValue: number;
+  };
+  totalBalance: CryptoBalance;
   setCurrencyUnit: (unit: CurrencyUnit) => void;
   cryptoBalance: CryptoBalance;
   setCryptoBalance: (balance: CryptoBalance) => void;
@@ -158,6 +172,19 @@ interface WillContextType {
   isEditMode: boolean;
   willIdToEdit: string | null;
   originalWill: any | null;
+
+  // Wallet management
+  wallets: Wallet[];
+  setWallets: (wallets: Wallet[]) => void;
+  addWallet: (wallet: Wallet) => void;
+  removeWallet: (id: string) => void;
+  updateWallet: (id: string, values: Partial<Wallet>) => void;
+  walletAllocations: WalletAllocation[];
+  setWalletAllocations: (allocations: WalletAllocation[]) => void;
+  addWalletAllocation: (allocation: WalletAllocation) => void;
+  removeWalletAllocation: (walletId: string) => void;
+  isFormSubmitting: boolean;
+  setIsFormSubmitting: (isSubmitting: boolean) => void;
 }
 
 interface WillProviderProps {
@@ -181,6 +208,9 @@ export const WillProvider: React.FC<WillProviderProps> = ({
   const [beneficiaryAllocations, setBeneficiaryAllocations] = useState<
     BeneficiaryAllocation[]
   >([]);
+  
+  // Derive beneficiaries from beneficiaryAllocations
+  const beneficiaries: Beneficiary[] = beneficiaryAllocations.map(allocation => allocation.beneficiary);
 
   // Form step state
   const [currentStep, setCurrentStep] = useState<FormStep>("beneficiaries");
@@ -196,7 +226,7 @@ export const WillProvider: React.FC<WillProviderProps> = ({
   const [currencyUnit, setCurrencyUnit] = useState<CurrencyUnit>("percentage");
 
   // Initial state for assets (ALEO, ETH, USDT, etc.)
-  const initialAssets: CryptoAsset[] = [
+  const initialAssets: Array<CryptoAsset> = [
     {
       symbol: "ALEO",
       balance: 2584.75,
@@ -227,6 +257,84 @@ export const WillProvider: React.FC<WillProviderProps> = ({
     "bitcoin",
   ]);
 
+  // Fetch public balance when testatorAddress changes
+  useEffect(() => {
+    const getPublicBalance = async () => {
+      if (testatorAddress) {
+        try {
+          // Implémentation directe de la récupération de la balance publique
+          console.log('Fetching public balance for address:', testatorAddress);
+          
+          // URL de l'API Provable Explorer - URL corrigée selon l'information fournie
+          const apiUrl = `https://api.explorer.provable.com/v1/testnet/address/${testatorAddress}/balance`;
+          console.log('API URL:', apiUrl);
+          
+          const response = await fetch(apiUrl);
+          
+          if (!response.ok) {
+            throw new Error(`Failed to fetch public balance: ${response.status} ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          console.log('API response:', data);
+          
+          // Extraction de la balance depuis la réponse
+          // Structure attendue: { balance: "123456" }
+          const balanceRaw = data?.balance || "0";
+          console.log('Raw balance:', balanceRaw);
+          
+          // Conversion en nombre
+          const balance = parseFloat(balanceRaw);
+          
+          // Valeur en USD (1 ALEO = $10 USD par défaut)
+          const usdValue = balance * 10;
+          
+          const publicBalanceData = {
+            symbol: "ALEO",
+            balance,
+            usdValue
+          };
+          
+          console.log('Processed public balance:', publicBalanceData);
+          setPublicBalance(publicBalanceData);
+        } catch (error) {
+          console.error('Failed to fetch public balance:', error);
+          // En cas d'erreur, définir une balance par défaut
+          setPublicBalance({
+            symbol: "ALEO",
+            balance: 0,
+            usdValue: 0
+          });
+        }
+      }
+    };
+
+    getPublicBalance();
+  }, [testatorAddress]);
+
+  // État pour cryptoBalance (initialisé avec valeurs par défaut et mis à jour par useEffect)
+  const [cryptoBalance, setCryptoBalance] = useState<CryptoBalance>({
+    symbol: "ALEO",
+    balance: 2584.75,
+    usdValue: 25847.5, // Valeur initiale estimée ($10 par ALEO)
+    assets: initialAssets,
+  });
+
+  // État pour la balance publique
+  const [publicBalance, setPublicBalance] = useState({
+    symbol: "ALEO",
+    balance: 0,
+    usdValue: 0,
+  });
+
+  // État pour la balance totale (privée + publique)
+  const [totalBalance, setTotalBalance] = useState<CryptoBalance>({
+    symbol: "ALEO",
+    balance: 2584.75,
+    usdValue: 25847.5,
+    assets: initialAssets,
+  });
+
   // Update USD values of assets when prices are loaded
   useEffect(() => {
     if (prices && !loading) {
@@ -256,7 +364,7 @@ export const WillProvider: React.FC<WillProviderProps> = ({
         };
       });
 
-      // Mettre à jour cryptoBalance avec les dernières valeurs
+      // Mettre à jour cryptoBalance avec les dernières valeurs (balance privée)
       setCryptoBalance({
         symbol: "ALEO", // Devise principale
         balance: updatedAssets[0].balance, // Solde ALEO
@@ -265,14 +373,31 @@ export const WillProvider: React.FC<WillProviderProps> = ({
       });
     }
   }, [prices, loading]);
+  
+  // Aggregate private and public balances
+  useEffect(() => {
+    // For ALEO, sum up the private and public balances
+    const totalAleoBalance = cryptoBalance.balance + publicBalance.balance;
+    const totalAleoUsdValue = cryptoBalance.usdValue + publicBalance.usdValue;
 
-  // État pour cryptoBalance (initialisé avec valeurs par défaut et mis à jour par useEffect)
-  const [cryptoBalance, setCryptoBalance] = useState<CryptoBalance>({
-    symbol: "ALEO",
-    balance: 2584.75,
-    usdValue: 25847.5, // Valeur initiale estimée ($10 par ALEO)
-    assets: initialAssets,
-  });
+    // Update the first asset (ALEO) with the combined balance
+    const updatedAssets = cryptoBalance.assets ? [...cryptoBalance.assets] : [];
+    if (updatedAssets.length > 0 && updatedAssets[0].symbol === "ALEO") {
+      updatedAssets[0] = {
+        ...updatedAssets[0],
+        balance: totalAleoBalance,
+        usdValue: totalAleoUsdValue,
+      };
+    }
+
+    // Update the total balance
+    setTotalBalance({
+      symbol: "ALEO",
+      balance: totalAleoBalance,
+      usdValue: totalAleoUsdValue,
+      assets: updatedAssets,
+    });
+  }, [cryptoBalance, publicBalance]);
 
   // Asset-specific allocations state
   const [assetAllocations, setAssetAllocations] = useState<AssetAllocation[]>(
@@ -285,6 +410,12 @@ export const WillProvider: React.FC<WillProviderProps> = ({
     CredentialAllocation[]
   >([]);
 
+  // Wallets state
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [walletAllocations, setWalletAllocations] = useState<WalletAllocation[]>(
+    []
+  );
+
   // Update a specific asset allocation
   const updateAssetAllocation = (
     assetSymbol: string,
@@ -293,20 +424,22 @@ export const WillProvider: React.FC<WillProviderProps> = ({
     isPortfolioAllocation: boolean = false
   ) => {
     // Trouver l'actif correspondant pour calculer le montant en fonction du pourcentage
-    const asset = cryptoBalance?.assets?.find((a) => a.symbol === assetSymbol);
+    // Utiliser totalBalance (privée + publique) au lieu de cryptoBalance (privée seulement)
+    const asset = totalBalance?.assets?.find((a) => a.symbol === assetSymbol);
 
     if (!asset) {
-      console.warn(`Asset ${assetSymbol} not found in crypto balance`);
+      console.warn(`Asset ${assetSymbol} not found in total balance`);
       return; // Ne pas poursuivre si l'actif n'existe pas
     }
 
-    // Calculer le montant basé sur le pourcentage
+    // Calculer le montant basé sur le pourcentage (utilisant la balance totale)
     const amount = (percentage / 100) * asset.balance;
 
     console.log(
       `Updating allocation for ${assetSymbol} to beneficiary ${beneficiaryId}: ` +
       `${percentage}% (${amount.toFixed(8)} ${assetSymbol}) - ` +
-      `Portfolio allocation: ${isPortfolioAllocation ? 'yes' : 'no'}`
+      `Portfolio allocation: ${isPortfolioAllocation ? 'yes' : 'no'} - ` +
+      `Using total balance (private + public): ${asset.balance}`
     );
 
     setAssetAllocations((prev) => {
@@ -523,9 +656,53 @@ export const WillProvider: React.FC<WillProviderProps> = ({
     );
   };
 
+  // Add a wallet
+  const addWallet = (wallet: Wallet) => {
+    setWallets((prev) => [...prev, wallet]);
+  };
+
+  // Remove a wallet
+  const removeWallet = (id: string) => {
+    setWallets((prev) => prev.filter((item) => item.id !== id));
+    // Also remove any allocations for this wallet
+    setWalletAllocations((prev) => prev.filter((item) => item.walletId !== id));
+  };
+
+  // Update a wallet
+  const updateWallet = (id: string, values: Partial<Wallet>) => {
+    setWallets((prev) =>
+      prev.map((item) => {
+        if (item.id === id) {
+          return { ...item, ...values };
+        }
+        return item;
+      })
+    );
+  };
+
+  // Add a wallet allocation
+  const addWalletAllocation = (allocation: WalletAllocation) => {
+    // Remove any existing allocation for this wallet
+    const filteredAllocations = walletAllocations.filter(
+      (item) => item.walletId !== allocation.walletId
+    );
+    setWalletAllocations([...filteredAllocations, allocation]);
+  };
+
+  // Remove a wallet allocation
+  const removeWalletAllocation = (walletId: string) => {
+    setWalletAllocations((prev) =>
+      prev.filter((item) => item.walletId !== walletId)
+    );
+  };
+
+  // Form submission state
+  const [isFormSubmitting, setIsFormSubmitting] = useState(false);
+
   return (
     <WillContext.Provider
       value={{
+        beneficiaries,
         beneficiaryAllocations,
         addBeneficiary,
         removeBeneficiary,
@@ -550,6 +727,8 @@ export const WillProvider: React.FC<WillProviderProps> = ({
         setCurrencyUnit,
         cryptoBalance,
         setCryptoBalance,
+        publicBalance,
+        totalBalance,
         note,
         setNote,
         currentStep,
@@ -558,6 +737,17 @@ export const WillProvider: React.FC<WillProviderProps> = ({
         isEditMode,
         willIdToEdit: willIdToEdit || null,
         originalWill,
+        wallets,
+        setWallets,
+        addWallet,
+        removeWallet,
+        updateWallet,
+        walletAllocations,
+        setWalletAllocations,
+        addWalletAllocation,
+        removeWalletAllocation,
+        isFormSubmitting,
+        setIsFormSubmitting,
       }}
     >
       {children}

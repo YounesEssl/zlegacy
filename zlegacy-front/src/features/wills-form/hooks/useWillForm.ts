@@ -52,6 +52,7 @@ export function useWillForm(
     { id: "beneficiaries" as FormStep, label: "Beneficiaries" },
     { id: "assets" as FormStep, label: "Assets" },
     { id: "credentials" as FormStep, label: "Credentials" },
+    { id: "wallets" as FormStep, label: "Wallets" },
     { id: "note" as FormStep, label: "Note" },
     { id: "executor" as FormStep, label: "Executor" },
     { id: "review" as FormStep, label: "Review" },
